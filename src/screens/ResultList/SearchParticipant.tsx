@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useRef, useCallback } from 'react';
 import {
     View,
     Text,
@@ -6,13 +6,12 @@ import {
     ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { commonStyles, spacing, space, palette } from '../../styles/common.styles';
 import { resultListStyle } from '../../styles/ResultList.styles';
 import SearchInput from '../../components/SearchInput';
 import { participantService, Participant } from '../../services/participantService';
-import { API_CONFIG } from '../../constants/config';
+import { useParticipantSearch } from './useParticipantSearch';
 import ParticipantCard from './ParticipantCard';
 import { SearchParticipantpops } from '../../types/navigation';
 import ErrorScreen from '../../components/ErrorScreen';
@@ -40,142 +39,39 @@ const SearchParticipant: React.FC<SearchParticipantpops> = ({ route, navigation 
         ? parseInt(product_app_id, 10)
         : product_app_id;
 
-    const [participants, setParticipants] = useState<Participant[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [loadingMore, setLoadingMore] = useState(false);
-    const [searchText, setSearchText] = useState('');
-    const [page, setPage] = useState(1);
-    const [totalPages, setTotalPages] = useState(1);
-
-    const debounceTimer = useRef<NodeJS.Timeout | null>(null);
     const searchInputRef = useRef<any>(null);
-    // ✅ Prevents double fetch — useFocusEffect and debounce useEffect both
-    // run on mount. This ref ensures only useFocusEffect fires the first time.
-    const isInitialLoad = useRef(true);
 
     const { error, hasError, handleApiError, clearError } = useScreenError();
 
-    const fetchParticipants = useCallback(
-        async (pageNum: number, search: string) => {
-            try {
-                if (pageNum === 1) {
-                    setLoading(true);
-                    clearError();
-                } else {
-                    setLoadingMore(true);
-                }
-
-                if (API_CONFIG.DEBUG) {
-                    console.log(`📡 Fetching participants page ${pageNum}`, {
-                        search: search || '(none)',
-                        product_app_id: productId,
-                    });
-                }
-
-                const result = await participantService.getParticipants({
-                    product_app_id: productId,
-                    product_option_value_app_id,
-                    page: pageNum,
-                    filter_name: search,
-                });
-
-                setParticipants(prev => {
-                    if (pageNum === 1) return result.participants;
-
-                    const existingIds = new Set(
-                        prev.map(p => participantService.getParticipantId(p))
-                    );
-                    const newItems = result.participants.filter(
-                        p => !existingIds.has(participantService.getParticipantId(p))
-                    );
-
-                    if (API_CONFIG.DEBUG) {
-                        console.log(`✅ Added ${newItems.length} new participants (Total: ${prev.length + newItems.length})`);
-                    }
-
-                    return [...prev, ...newItems];
-                });
-
-                setPage(pageNum);
-                setTotalPages(result.pagination.total_pages);
-
-                // Fires ONCE per completed search. fetchParticipants is shared by
-                // three callers, so both guards matter:
-                //   pageNum === 1   → excludes pagination (same search, more pages)
-                //   search non-empty → excludes the initial useFocusEffect load,
-                //                      which calls fetchParticipants(1, '')
-                // Sends pagination.total (all matches), not participants.length,
-                // which is capped at one page. Never the query text — free text is
-                // unbounded and would blow GA4's cardinality limit.
-                if (pageNum === 1 && search.trim().length > 0) {
-                    // In-race search; only the product id is in scope here.
-                    void analyticsService.logSearchPerformed(
-                        'participant',
-                        result.pagination.total ?? result.participants.length,
-                        {
-                            [ANALYTICS_PARAMS.EVENT_NAME]: event_name ?? '',
-                            [ANALYTICS_PARAMS.RACE_ID]: product_app_id,
-                        },
-                    );
-                }
-
-                if (API_CONFIG.DEBUG) {
-                    console.log(`📄 Page ${pageNum}/${result.pagination.total_pages} | Total: ${result.pagination.total}`);
-                }
-            } catch (err: any) {
-                if (API_CONFIG.DEBUG) {
-                    console.error('❌ Error fetching participants:', err.message);
-                }
-                if (pageNum === 1) handleApiError(err);
-            } finally {
-                setLoading(false);
-                setLoadingMore(false);
-            }
+    // ✅ The list's requests live in useParticipantSearch (app audit
+    // 2026-11-26): newest search wins, pages of an older search are dropped,
+    // no reset to the unfiltered list on returning from a runner, and one
+    // next page at a time. See that file for the history.
+    const {
+        participants, loading, loadingMore, searchText, setSearchText, loadMore, retry,
+    } = useParticipantSearch({
+        productId,
+        productOptionValueAppId: product_option_value_app_id,
+        onError: handleApiError,
+        clearError,
+        // Fires ONCE per completed search (page 1, non-empty query). Sends
+        // pagination.total (all matches), not participants.length, which is
+        // capped at one page. Never the query text — free text is unbounded
+        // and would blow GA4's cardinality limit.
+        onSearched: (total) => {
+            // In-race search; only the product id is in scope here.
+            void analyticsService.logSearchPerformed(
+                'participant',
+                total,
+                {
+                    [ANALYTICS_PARAMS.EVENT_NAME]: event_name ?? '',
+                    [ANALYTICS_PARAMS.RACE_ID]: product_app_id,
+                },
+            );
         },
-        [productId, product_option_value_app_id] // ✅ removed `t` (stable), added product_option_value_app_id
-    );
+    });
 
-    // ✅ Initial fetch on screen focus
-    useFocusEffect(
-        useCallback(() => {
-            isInitialLoad.current = true;
-            fetchParticipants(1, '');
-        }, [fetchParticipants])
-    );
-
-    // ✅ Debounced search — skips the very first render handled by useFocusEffect
-    useEffect(() => {
-        if (isInitialLoad.current) {
-            isInitialLoad.current = false;
-            return;
-        }
-
-        if (debounceTimer.current) clearTimeout(debounceTimer.current);
-
-        debounceTimer.current = setTimeout(() => {
-            fetchParticipants(1, searchText);
-        }, 500);
-
-        return () => {
-            if (debounceTimer.current) clearTimeout(debounceTimer.current);
-        };
-    }, [searchText, fetchParticipants]);
-
-    const hasMorePages = useCallback(() => page < totalPages, [page, totalPages]);
-
-    const handleLoadMore = useCallback(() => {
-        if (API_CONFIG.DEBUG) {
-            console.log('🔍 onEndReached triggered:', {
-                hasMore: hasMorePages(),
-                loading: loadingMore,
-                currentPage: page,
-                totalPages,
-            });
-        }
-
-        if (!hasMorePages() || loadingMore) return;
-        fetchParticipants(page + 1, searchText);
-    }, [page, totalPages, loadingMore, searchText, hasMorePages, fetchParticipants]);
+    const handleLoadMore = loadMore;
 
     const renderParticipant = useCallback(
         ({ item }: { item: Participant }) => (
@@ -229,7 +125,7 @@ const SearchParticipant: React.FC<SearchParticipantpops> = ({ route, navigation 
                     type={error!.type}
                     title={error!.title}
                     message={error!.message}
-                    onRetry={() => { clearError(); fetchParticipants(1, searchText); }}
+                    onRetry={() => { clearError(); retry(); }}
                 />
             </SafeAreaView>
         );

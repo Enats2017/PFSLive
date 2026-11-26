@@ -52,7 +52,11 @@ module.exports = function register({ M, load, test, SRC }) {
   });
   test('App.tsx: both email links go through the ready-wait and the shared parser', () => {
     const s = read('../App.tsx');
-    assert.strictEqual((s.match(/whenNavigatorReady\(/g) || []).length, 2);
+    // Both email links (inside handleDeepLink) wait for the navigator; since
+    // the 2026-11-26 audit the GPX share (navigateToPersonalEvent) does too.
+    const links = s.slice(s.indexOf('const handleDeepLink = '), s.indexOf("Linking.addEventListener('url'"));
+    assert.strictEqual((links.match(/whenNavigatorReady\(/g) || []).length, 2, 'both email links');
+    assert.strictEqual((s.match(/whenNavigatorReady\(/g) || []).length, 3, 'two email links + the GPX share');
     assert.ok(!/p\.split\('='\)/.test(s), 'old inline parser gone');
   });
 

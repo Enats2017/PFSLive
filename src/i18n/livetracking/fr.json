@@ -46,5 +46,6 @@
   "liveMap": "Carte en direct",
   "raceState_live": "En direct",
   "raceState_finished": "Terminé",
-  "raceState_upcoming": "À venir"
+  "raceState_upcoming": "À venir",
+  "refreshFailed": "Problème de connexion — dernières positions affichées. Nouvel essai…"
 }

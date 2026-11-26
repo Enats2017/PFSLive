@@ -46,5 +46,6 @@
   "liveMap": "Live map",
   "raceState_live": "Live",
   "raceState_finished": "Finished",
-  "raceState_upcoming": "Upcoming"
+  "raceState_upcoming": "Upcoming",
+  "refreshFailed": "Connection problem — last known positions shown. Retrying…"
 }

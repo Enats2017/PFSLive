@@ -19,9 +19,13 @@ import { buildChartData } from '../utils/geoUtils';
 import { ParticipantMapMarker, AidStationMapMarker, PopupState, CheckpointData } from '../types/liveTracking';
 import { useFollowManager } from '../hooks/useFollowManager';
 import { followedBibsForEvent } from '../utils/liveMapBibs';
-import { isCurrentLiveResponse, dropClearsLoading, ownsError, liveFollowsKey } from '../utils/liveMapRequests';
-import { useFocusEffect } from '@react-navigation/native';
-import { commonStyles, palette } from '../styles/common.styles';
+import {
+    isCurrentLiveResponse, dropClearsLoading, ownsError, liveFollowsKey,
+    failureShowsErrorScreen, shouldRunAutoRefresh, rateLimitPauseMs, liveRefreshMs,
+} from '../utils/liveMapRequests';
+import { isRateLimited } from '../services/api';
+import { useFocusEffect, useIsFocused } from '@react-navigation/native';
+import { commonStyles, palette, fonts, space } from '../styles/common.styles';
 import { liveTrackingStyles, ELEVATION_PANEL_HEIGHT } from '../styles/liveTracking.styles';
 import { useLandscapeSidePadding, useSafeAreaEdges } from '../hooks/useLandscapeSidePadding';
 import { ChartDataPoint } from '../types';
@@ -33,6 +37,12 @@ import { isTracking } from '../services/gpsService';
 import { useDimensions } from '../hooks/useDimensions';
 import { analyticsService } from '../services/analyticsService';
 import { ANALYTICS_SCREENS, ANALYTICS_BUTTONS, ANALYTICS_PARAMS } from '../constants/analyticsScreens';
+
+// ✅ Stable empty props for the memoised elevation profile (a `[]` literal is a
+// new array on every render, so React.memo always saw a change).
+const NO_AID_STATIONS: GPXRouteData['aidStations'] = [];
+const NO_CHECKPOINTS: CheckpointData[] = [];
+const NO_MARKERS: ParticipantMapMarker[] = [];
 
 const safeParseFloat = (value: any): number => {
     if (value === null || value === undefined) return 0;
@@ -150,6 +160,22 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
     // Running requests: seq → the distance each asks for (null until known).
     const inFlightDistance = useRef(new Map<number, number | null>());
     const { error, hasError, handleApiError, clearError } = useScreenError();
+    // ✅ (app audit 2026-11-26) Polling only while the map is the screen on top.
+    // The native stack keeps this screen mounted under Result Details / the
+    // tab bar's other screens, and its 60 s / 10 s refresh, location watcher
+    // and requests used to keep running there unseen.
+    const isFocused = useIsFocused();
+    // A map has been drawn from a successful answer: a later failed auto
+    // refresh keeps it (failureShowsErrorScreen) instead of hiding it.
+    const hasShownData = useRef(false);
+    // Auto / follow refreshes still waiting — the next tick waits for them.
+    const autoInFlight = useRef(0);
+    // 429 Retry-After: no auto refresh before this instant (epoch ms).
+    const pausedUntil = useRef(0);
+    // When the last answer was applied, to refresh at once on refocus if stale.
+    const lastAppliedAt = useRef(0);
+    // The last auto refresh failed; the map shows the previous positions.
+    const [refreshFailed, setRefreshFailed] = useState(false);
 
     const participantMarkers: ParticipantMapMarker[] = useMemo(() => {
         return participants
@@ -226,39 +252,14 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
 
     // Refresh cadence: speed up to 10s when any tracked runner is within 1km of
     // the finish, so the finish moment is caught promptly; otherwise 60s.
-    const FINISH_APPROACH_KM = 1.0;
-    const NORMAL_REFRESH_MS = 60000;
-    const FAST_REFRESH_MS = 10000;
-
-    const refreshMs = useMemo(() => {
-        const total = routeData?.totalDistance ?? 0;
-
-        const nearFinish = participants.some(p => {
-            // Prefer the stored distance-to-finish from the API; fall back to
-            // total − covered only when it's absent (e.g. an RR-only partner
-            // runner with no stored GPS fix).
-            let remaining: number | null =
-                p.distance_to_finish_km != null ? safeParseFloat(p.distance_to_finish_km) : null;
-
-            if (remaining == null) {
-                // Training: there is no "remaining". total is the reference GPX
-                // length and covered is an odometer, so total − covered is
-                // meaningless — and lands in the 0-1km fast-refresh band exactly
-                // when the session passes the GPX length.
-                if (trainingFree) return false;
-                if (total <= 0) return false;
-                const covered = safeParseFloat(p.distance_covered_km);
-                if (covered <= 0) return false;
-                remaining = total - covered;
-            }
-
-            // 0 < remaining < 1km → final approach. Negative (mid-race overlap on a
-            // looping route) and 0 (finished) both correctly stay at normal cadence.
-            return remaining > 0 && remaining < FINISH_APPROACH_KM;
-        },);
-
-        return nearFinish ? FAST_REFRESH_MS : NORMAL_REFRESH_MS;
-    }, [participants, routeData?.totalDistance, trainingFree]);
+    // ✅ The rule lives in utils/liveMapRequests.liveRefreshMs (tested), which
+    // also ignores runners who are offline, finished or silent for 10 min — a
+    // runner stopped 500 m from the line held every viewer at 10 s for good
+    // (app audit 2026-11-26).
+    const refreshMs = useMemo(
+        () => liveRefreshMs(participants, routeData?.totalDistance ?? 0, trainingFree),
+        [participants, routeData?.totalDistance, trainingFree],
+    );
 
     // ✅ Follower's own position — watched on mount, never written to DB.
     // Uses Balanced accuracy (battery friendly) since precision isn't critical.
@@ -272,7 +273,11 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
     // Also skipped while this phone is tracking a race: Option B (gpsService
     // header) — a second location stream next to Transistor's is exactly what
     // destabilised Hermes under the New Architecture.
+    //
+    // ✅ Only while the map is on top (app audit 2026-11-26): the watcher kept
+    // running under every other screen — one per stacked map.
     useEffect(() => {
+        if (!isFocused) return;
         let watcher: Location.LocationSubscription | null = null;
         let cancelled = false;
 
@@ -304,7 +309,7 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
 
         startFollowerLocation();
         return () => { cancelled = true; watcher?.remove(); };
-    }, []);
+    }, [isFocused]);
 
     // ✅ Initial load with followed users check
     useEffect(() => {
@@ -367,9 +372,24 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
 
     useEffect(() => {
         if (!hasLoadedInitialData.current || loading) return;
+        // ✅ No polling under another screen (app audit 2026-11-26).
+        if (!isFocused) return;
+
+        // Back on the map after longer than one refresh period: refresh now
+        // rather than showing positions up to 60 s older than the clock says.
+        if (lastAppliedAt.current > 0 && Date.now() - lastAppliedAt.current >= refreshMs
+            && shouldRunAutoRefresh({ focused: true, autoInFlight: autoInFlight.current, pausedUntil: pausedUntil.current, now: Date.now() })) {
+            loadLiveTrackingData(true);
+        }
 
         console.log(`⏰ Setting up ${refreshMs / 1000}s refresh interval`);
         const interval = setInterval(() => {
+            // ✅ Skip a tick while the previous auto refresh is still out or a
+            // 429 asked us to wait — they used to pile up at the 10 s cadence.
+            if (!shouldRunAutoRefresh({ focused: true, autoInFlight: autoInFlight.current, pausedUntil: pausedUntil.current, now: Date.now() })) {
+                console.log('⏭️ Auto-refresh skipped (previous still running, or rate limited)');
+                return;
+            }
             console.log('🔄 Auto-refresh triggered');
             loadLiveTrackingData(true);
         }, refreshMs);
@@ -380,7 +400,7 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
         };
     // followsKey, not the followedUsers Set: the focus reload makes a new Set every
     // time, which would restart the 60 s countdown on each return to the screen.
-    }, [hasLoadedInitialData.current, loading, selectedDistance, followsKey, refreshMs]);
+    }, [hasLoadedInitialData.current, loading, selectedDistance, followsKey, refreshMs, isFocused]);
 
     const loadLiveTrackingData = async (autoRefresh: boolean, overrideDistance?: DistanceOption | null) => {
         // Tag this request (utils/liveMapRequests): its answer is only applied
@@ -400,6 +420,7 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
             }
         };
         inFlightDistance.current.set(seq, null);
+        if (autoRefresh) autoInFlight.current++;
         try {
             if (!autoRefresh) {
                 setLoading(true);
@@ -586,6 +607,13 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
             setTrainingFree(response?.data?.training_free === true);
 
             setLoading(false);
+            // ✅ A good answer is on screen: a later failed poll keeps it, and
+            // an error screen left by an earlier failure goes (app audit
+            // 2026-11-26 — a success used to leave that error up for good).
+            hasShownData.current = true;
+            lastAppliedAt.current = Date.now();
+            setRefreshFailed(false);
+            clearError();
 
             setTimeout(() => {
                 console.log('✅ Participants rendering complete');
@@ -607,6 +635,17 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
                 if (dropClearsLoading(others.length)) { setLoading(false); setParticipantsLoading(false); }
                 return;
             }
+            // ✅ 429: wait the server's Retry-After before the next auto refresh.
+            if (isRateLimited(err)) pausedUntil.current = Date.now() + rateLimitPauseMs(err);
+            // ✅ A failed auto refresh over a map that is already drawn keeps the
+            // map (last positions + a "connection problem" banner); the next
+            // success clears it. It used to replace the map with the error
+            // screen for good (app audit 2026-11-26).
+            if (!failureShowsErrorScreen(autoRefresh, hasShownData.current)) {
+                setRefreshFailed(true);
+                if (dropClearsLoading(others.length)) { setLoading(false); setParticipantsLoading(false); }
+                return;
+            }
             handleApiError(err);
             setLoading(false);
             setParticipantsLoading(false);
@@ -619,6 +658,7 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
             }
         } finally {
             inFlightDistance.current.delete(seq);
+            if (autoRefresh) autoInFlight.current = Math.max(0, autoInFlight.current - 1);
         }
     };
 
@@ -707,7 +747,10 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
         setLoading(true);
         await loadLiveTrackingData(false, distance);
     };
-    const handleParticipantPress = (participant: ParticipantMapMarker) => {
+    // ✅ useCallback (app audit 2026-11-26): LiveElevationProfile is React.memo,
+    // but fresh handlers on every render defeated it, so the Victory chart with
+    // every GPX point was rebuilt on each location update / spinner toggle.
+    const handleParticipantPress = useCallback((participant: ParticipantMapMarker) => {
         void analyticsService.logInteraction(
             liveScreenName,
             ANALYTICS_BUTTONS.MAP_PARTICIPANT,
@@ -715,9 +758,9 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
             { [ANALYTICS_PARAMS.EVENT_NAME]: event_name },
         );
         setPopupState({ type: 'participant', data: participant });
-    };
+    }, [liveScreenName, event_name]);
 
-    const handleAidStationPress = (station: AidStationMapMarker) => {
+    const handleAidStationPress = useCallback((station: AidStationMapMarker) => {
         console.log('🔍 aid station pressed:', station);
         void analyticsService.logInteraction(
             liveScreenName,
@@ -726,11 +769,27 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
             { [ANALYTICS_PARAMS.EVENT_NAME]: event_name },
         );
         setPopupState({ type: 'aidstation', data: station });
-    };
+    }, [liveScreenName, event_name]);
 
     const handleClosePopup = () => {
         setPopupState({ type: null, data: null });
     };
+
+    // ✅ The tab bar can bring this map back (pop) with another distance label
+    // (re-audit 2026-11-26): Map → Results → pick another distance → Map. The
+    // label was only read on the first load, so the map kept the old distance.
+    // React to a CHANGE of the param only — a distance picked here in the map
+    // (dropdown) must not be undone by the unchanged param.
+    const lastLabelParam = useRef(selectedDistanceLabel);
+    useEffect(() => {
+        if (lastLabelParam.current === selectedDistanceLabel) return;
+        lastLabelParam.current = selectedDistanceLabel;
+        if (!selectedDistanceLabel || distances.length === 0) return;
+        const wanted = distances.find(d => d.distance_name === selectedDistanceLabel);
+        if (wanted && wanted.product_option_value_app_id !== selectedDistance?.product_option_value_app_id) {
+            void handleDistanceChange(wanted);
+        }
+    }, [selectedDistanceLabel, distances]);
 
     const hasGpx = !!routeData;
     const hasCheckpoints = apiCheckpoints != null && apiCheckpoints.length > 0;
@@ -864,6 +923,32 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
                     raceState={raceState}
                 />
             )}
+            {/* ✅ A failed auto refresh keeps the map (app audit 2026-11-26):
+                say the positions are the last known ones instead of hiding
+                the whole map behind the error screen. Cleared by the next
+                good answer.
+                ✅ A strip ABOVE the map, not floating on it (UI check
+                2026-11-26): as an overlay (top 8, 56pt sides, elevation 20) it
+                was painted over the open runner / checkpoint popup on Android
+                portrait (elevation beats the popup's zIndex), covered the top
+                of the elevation panel on a short map, and its 2-line cap cut
+                the text ("…") at 320-393pt in fr / nl and at larger text. Here
+                the map area shrinks by its height (panelHeight follows via
+                onLayout) and it sits inside sidePadding, clear of the notch. */}
+            {refreshFailed && (
+                <View
+                    pointerEvents="none"
+                    style={{
+                        backgroundColor: palette.ink, borderRadius: 8,
+                        paddingVertical: 4, paddingHorizontal: 10,
+                        marginHorizontal: space.xl, marginVertical: 6,   // the head row's 20pt gutter
+                    }}
+                >
+                    <Text style={{ color: palette.surface, fontFamily: fonts.bodyMedium, fontSize: 12, lineHeight: 16, textAlign: 'center' }} numberOfLines={3}>
+                        {t('livetracking:refreshFailed')}
+                    </Text>
+                </View>
+            )}
             <View
                 style={{ flex: 1 }}
                 onLayout={(e) => setMapAreaHeight(Math.round(e.nativeEvent.layout.height))}
@@ -903,9 +988,9 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
                     >
                         <LiveElevationProfile
                             chartData={chartData}
-                            aidStations={showCheckpoints ? (routeData?.aidStations ?? []) : []}
-                            apiCheckpoints={showCheckpoints ? apiCheckpoints : []}
-                            participants={showParticipants ? participantMarkers : []}
+                            aidStations={showCheckpoints ? (routeData?.aidStations ?? NO_AID_STATIONS) : NO_AID_STATIONS}
+                            apiCheckpoints={showCheckpoints ? apiCheckpoints : NO_CHECKPOINTS}
+                            participants={showParticipants ? participantMarkers : NO_MARKERS}
                             trainingFree={trainingFree}
                             totalDistance={routeData?.totalDistance ?? 0}
                             minElevation={routeData?.minElevation ?? 0}

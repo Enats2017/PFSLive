@@ -46,5 +46,6 @@
   "liveMap": "Live kaart",
   "raceState_live": "Live",
   "raceState_finished": "Afgelopen",
-  "raceState_upcoming": "Binnenkort"
+  "raceState_upcoming": "Binnenkort",
+  "refreshFailed": "Verbindingsprobleem — laatste posities getoond. Opnieuw proberen…"
 }

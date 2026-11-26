@@ -1,5 +1,6 @@
 {
   "race": {
+    "loadMoreFailed": "Meer resultaten laden is mislukt. Tik om opnieuw te proberen.",
     "loading": "Resultaten laden…",
     "noResults": "Geen resultaten voor deze filters.",
     "live": "LIVE",

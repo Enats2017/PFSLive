@@ -56,7 +56,12 @@
       "message": "{applicationName} deelt je live positie met je volgers tijdens een wedstrijd, zelfs als de app gesloten of niet in gebruik is. Kies \"{backgroundPermissionOptionLabel}\" om dit in te schakelen.",
       "positiveAction": "Wijzig naar \"{backgroundPermissionOptionLabel}\"",
       "negativeAction": "Annuleren"
-    }
+    },
+    "stopping": "Bezig met stoppen…",
+    "stopInProgressTitle": "Even geduld",
+    "stopInProgressBody": "Nog bezig met versturen. Probeer zo opnieuw.",
+    "previousDayStoppedTitle": "Eerdere dag gestopt",
+    "previousDayStoppedBody": "Druk op Start voor de wedstrijd van vandaag."
   },
   "battery": {
     "title": "Achtergrondtracking inschakelen",
@@ -195,5 +200,12 @@
     "earlyBody": "Open Livio nu één keer zodat de tracking klaar is bij de start. Vergrendel daarna je telefoon weer.",
     "notSendingTitle": "Livio kan je positie niet versturen",
     "notSendingBody": "Je wedstrijd wordt opgenomen, maar Livio heeft al 20 minuten geen internetverbinding, dus je volgers zien je niet. Controleer of mobiele data (en dataroaming in het buitenland) aan staat. Alles wat is opgenomen wordt verstuurd zodra de verbinding terug is."
+  },
+  "auth": {
+    "expiredTitle": "Log opnieuw in",
+    "expiredTrackingBody": "Je login is niet meer geldig. Livio blijft je wedstrijd opnemen, maar je volgers zien je posities pas weer nadat je opnieuw inlogt.",
+    "expiredBody": "Je login is niet meer geldig, daarom ben je uitgelogd. Log opnieuw in om je wedstrijden te volgen.",
+    "logIn": "Inloggen",
+    "later": "Later"
   }
 }

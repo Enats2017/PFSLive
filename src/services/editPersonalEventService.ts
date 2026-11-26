@@ -1,5 +1,6 @@
 import { API_CONFIG, getApiEndpoint } from '../constants/config';
 import { apiClient } from './api';
+import { UPLOAD_TIMEOUT_MS, editStartHourValue } from '../screens/PersonalEventScreen/personalEventGuards';
 
 // ✅ TYPES
 export interface PersonalEvent {
@@ -27,7 +28,7 @@ export interface UpdatePersonalEventParams {
   categoryId?: number | null; 
   date: string;
   startTime: string;
-  timezone: string;
+  timezone?: string;   // undefined → the event keeps its zone (see editTimezoneToSend)
   selectedFile?: SelectedFile;
   removeGpx?: boolean;
 }
@@ -48,6 +49,7 @@ export interface UpdateEventResult {
   success: boolean;
   message: string;
   fields?: string[]; // ✅ e.g. ['name_required', 'race_date_invalid']
+  reason?: string;   // ✅ 'tracking_recent' next to tracking_already_started (re-audit 2026-11-26)
 }
 
 // ✅ GET PERSONAL EVENT
@@ -93,15 +95,19 @@ export const updatePersonalEvent = async (
     body.append('product_custom_app_id', String(params.eventId));
     body.append('name', params.name.trim());
     body.append('race_date', params.date);
-    body.append('timezone', params.timezone);
-
-    console.log("11111",params.timezone);
-    
-
-    // ✅ startTime optional — only append if non-empty
-    if (params.startTime?.trim()) {
-      body.append('start_hour', params.startTime);
+    // ✅ Only when the screen says so (audit 2026-11-26): the phone's zone on
+    // every save re-zoned an event renamed abroad. The server keeps a zone it
+    // is not sent. See editTimezoneToSend.
+    if (params.timezone) {
+      body.append('timezone', params.timezone);
     }
+
+    if (API_CONFIG.DEBUG) console.log('🌍 Edit timezone:', params.timezone || '(kept)');
+
+    // ✅ startTime optional — but ALWAYS sent (audit 2026-11-26): left out when
+    // cleared, the server kept the old time and the screen said "updated".
+    // '' = cleared (stored as 00:00, the same as a create without a time).
+    body.append('start_hour', editStartHourValue(params.startTime));
 
     if (params.eventTypeId !== null && params.eventTypeId !== undefined) {
       body.append('event_type', String(params.eventTypeId));
@@ -147,7 +153,8 @@ export const updatePersonalEvent = async (
     const response = await apiClient.postRaw<UpdateEventResponse>(
       getApiEndpoint(API_CONFIG.ENDPOINTS.UPDATE_CUSTOM_EVENT),
       body,
-      { headers, timeout: API_CONFIG.TIMEOUT }
+      // ✅ Upload timeout (audit 2026-11-26) — same reason as the create.
+      { headers, timeout: UPLOAD_TIMEOUT_MS }
     );
 
     if (API_CONFIG.DEBUG) console.log('✅ UPDATE Personal Event Response:', response.data);
@@ -172,6 +179,7 @@ export const updatePersonalEvent = async (
         success: false,
         message: responseData.error ?? 'API_ERROR',
         fields: [],
+        reason: typeof responseData?.data?.reason === 'string' ? responseData.data.reason : undefined,
       };
     }
 

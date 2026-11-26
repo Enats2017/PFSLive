@@ -71,6 +71,8 @@
     "eventFinishedMessage": "Cet événement est déjà terminé. L'inscription n'est plus disponible.",
     "validationErrorTitle": "Erreur de Validation",
     "validationErrorMessage": "Les informations fournies sont invalides. Veuillez vérifier et réessayer.",
+    "inProgressTitle": "Inscription en cours",
+    "inProgressMessage": "Votre inscription est encore en cours de traitement. Veuillez réessayer dans un instant.",
     "participant_not_found": "Participant introuvable."
   },
   "registrationModal": {

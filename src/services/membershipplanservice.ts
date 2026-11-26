@@ -10,6 +10,9 @@ export interface Entitlement {
   status: string;
   sessions_remaining: number | null;
   current_period_end: string | null;
+  // ✅ Paid, the cron has not turned it into a membership yet (audit #4).
+  // Optional: an older server does not send it, which reads as false.
+  payment_pending?: boolean;
 }
 
 export interface PlanItem {
@@ -27,6 +30,10 @@ export interface MembershipPlansData {
   entitlement: Entitlement;
   global_message_code: string | null;
   plans: PlanItem[];
+  // ✅ UUID passed to StoreKit as appAccountToken (audit #5), so the server
+  // can tell which account a transaction was bought for. Optional: an older
+  // server does not send it and the app buys without one, as before.
+  app_account_token?: string | null;
 }
 
 interface MembershipPlansApiResponse {

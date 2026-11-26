@@ -56,7 +56,12 @@
       "message": "{applicationName} partage votre position en direct avec vos abonnés pendant une course, même lorsque l'application est fermée ou inutilisée. Pour l'activer, choisissez « {backgroundPermissionOptionLabel} ».",
       "positiveAction": "Passer à « {backgroundPermissionOptionLabel} »",
       "negativeAction": "Annuler"
-    }
+    },
+    "stopping": "Arrêt en cours…",
+    "stopInProgressTitle": "Arrêt en cours",
+    "stopInProgressBody": "Envoi des dernières positions. Réessayez.",
+    "previousDayStoppedTitle": "Jour précédent arrêté",
+    "previousDayStoppedBody": "Appuyez sur Démarrer pour la course du jour."
   },
   "battery": {
     "title": "Activer le suivi en arrière-plan",
@@ -195,5 +200,12 @@
     "earlyBody": "Ouvrez Livio une fois maintenant pour que le suivi soit prêt au départ. Verrouillez ensuite votre téléphone.",
     "notSendingTitle": "Livio ne peut pas envoyer votre position",
     "notSendingBody": "Votre course est enregistrée, mais Livio n'a plus de connexion internet depuis 20 minutes : vos suiveurs ne vous voient pas. Vérifiez que les données mobiles (et l'itinérance à l'étranger) sont activées. Tout ce qui a été enregistré est envoyé dès que la connexion revient."
+  },
+  "auth": {
+    "expiredTitle": "Veuillez vous reconnecter",
+    "expiredTrackingBody": "Votre connexion n'est plus valide. Livio continue d'enregistrer votre course, mais vos suiveurs ne verront à nouveau vos positions qu'après votre reconnexion.",
+    "expiredBody": "Votre connexion n'est plus valide, vous avez donc été déconnecté. Reconnectez-vous pour suivre vos courses.",
+    "logIn": "Se connecter",
+    "later": "Plus tard"
   }
 }

@@ -6,6 +6,8 @@
     "awards": "Prijzen"
   },
   "raceInfo": {
+    "staleSince": "Verbindingsprobleem — laatst bijgewerkt om {{time}}",
+    "staleNoTime": "Verbindingsprobleem — niet bijgewerkt",
     "finisher": "Finisher",
     "raceTime": "RACETIJD",
     "previousTimingPoint": "Vorig timing point",

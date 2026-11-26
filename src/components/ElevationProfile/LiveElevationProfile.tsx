@@ -25,6 +25,44 @@ interface LiveElevationProfileProps {
     panelHeight?: number;
 }
 
+/**
+ * The k route points nearest to (lat, lon), nearest first — the same set
+ * (and the same tie order: earlier point first) as sorting the whole array by
+ * squared lat/lon distance and taking k, in O(n) instead of O(n log n) plus a
+ * full copy per runner.
+ */
+export function nearestChartPoints(
+    chartData: ChartDataPoint[], lat: number, lon: number, k: number,
+): Array<{ pt: ChartDataPoint; diff: number }> {
+    const best: Array<{ pt: ChartDataPoint; diff: number }> = [];
+    for (let i = 0; i < chartData.length; i++) {
+        const pt = chartData[i];
+        const diff = Math.pow(pt.lat - lat, 2) + Math.pow(pt.lon - lon, 2);
+        if (best.length === k && diff >= best[k - 1].diff) continue;
+        let j = best.length < k ? best.length : k - 1;
+        if (best.length < k) best.push({ pt, diff }); else best[j] = { pt, diff };
+        while (j > 0 && best[j - 1].diff > diff) { const tmp = best[j - 1]; best[j - 1] = best[j]; best[j] = tmp; j--; }
+    }
+    return best;
+}
+
+/** Most points the area path is drawn with; the dots use the full data. */
+export const MAX_DRAWN_CHART_POINTS = 1500;
+
+/**
+ * Every n-th point (first and last always kept), at most `max` points.
+ * ✅ (app audit 2026-11-26) A 40k-point GPX was drawn as a 40k-vertex SVG
+ * path, rebuilt on each render; 1500 points is ~70 m resolution on 100 km,
+ * finer than the 180 pt tall chart can show.
+ */
+export function downsampleChart(chartData: ChartDataPoint[], max: number = MAX_DRAWN_CHART_POINTS): ChartDataPoint[] {
+    if (chartData.length <= max) return chartData;
+    const step = (chartData.length - 1) / (max - 1);
+    const out: ChartDataPoint[] = [];
+    for (let i = 0; i < max; i++) out.push(chartData[Math.round(i * step)]);
+    return out;
+}
+
 export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.memo(({
     chartData,
     aidStations,
@@ -46,6 +84,10 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
     const { width: screenWidth } = useWindowDimensions();
 
     const scrollViewRef = React.useRef<ScrollView>(null);
+    // ✅ The user scrolled the profile themself: stop snapping it back to the
+    // runner on every poll (app audit 2026-11-26).
+    const userScrolledRef = React.useRef(false);
+    const drawnChartData = React.useMemo(() => downsampleChart(chartData), [chartData]);
 
     // ── Chart width ───────────────────────────────────────────────────────
     // Short/medium routes span a FIXED physical width (DISTANCE_DIVISOR cm), so
@@ -139,10 +181,12 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
             .filter(p => p.lat !== 0 && p.lon !== 0)
             .map(p => {
                 if (chartData.length === 0) return null;
-                const sorted = [...chartData]
-                    .map(pt => ({ pt, diff: Math.pow(pt.lat - p.lat, 2) + Math.pow(pt.lon - p.lon, 2) }))
-                    .sort((a, b) => a.diff - b.diff)
-                    .slice(0, 3);
+                // ✅ The 3 nearest route points in ONE pass (app audit
+                // 2026-11-26): this copied and sorted the whole chartData per
+                // runner on every poll — ~6M comparisons for 10 runners on a
+                // 40k-point ultra GPX, a visible freeze every 10-60 s.
+                // Same pick as before: of those 3, the one closest in distance.
+                const sorted = nearestChartPoints(chartData, p.lat, p.lon, 3);
                 const best = sorted.reduce((prev, curr) => {
                     const prevDiff = Math.abs(prev.pt.x - p.distance_km);
                     const currDiff = Math.abs(curr.pt.x - p.distance_km);
@@ -168,6 +212,7 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
     // ✅ NEW: Auto-scroll to keep participant dot visible whenever their position changes
     React.useEffect(() => {
         if (participantChartPoints.length === 0 || !scrollViewRef.current) return;
+        if (userScrolledRef.current) return;
         const participantX = participantChartPoints[0].x;
         const dotPixelX = (participantX / totalDistance) * chartWidth;
         const scrollTarget = dotPixelX - screenWidth / 2;
@@ -305,6 +350,7 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
 
             <ScrollView
                 ref={scrollViewRef}  // ✅ NEW: attach ref
+                onScrollBeginDrag={() => { userScrolledRef.current = true; }}
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 style={[liveTrackingStyles.profileScrollView, { backgroundColor: 'transparent' }]}
@@ -333,7 +379,7 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
                         />
 
                         <VictoryArea
-                            data={chartData}
+                            data={drawnChartData}
                             interpolation="monotoneX"
                             style={{
                                 data: {

@@ -18,7 +18,8 @@ import { AppHeader } from '../../components/common/AppHeader';
 import { useLandscapeSidePadding, useSafeAreaEdges } from '../../hooks/useLandscapeSidePadding';
 import { Button } from '../../components/ui';
 import { membershipPlansStyle as styles, COLORS } from '../../styles/membershipPlans.styles';
-import { useMembershipPlans, PlanId, PLAN_IDS } from '../../hooks/useMembershipplans';
+import { useMembershipPlans, PlanId, PLAN_IDS, PURCHASE_UNCONFIRMED, PURCHASE_OTHER_ACCOUNT, PURCHASE_CREDITED_OTHER } from '../../hooks/useMembershipplans';
+import { activationBuyBlock } from '../../hooks/iapPurchaseFlow';
 import MembershipPlanModel, { ModalActionType } from '../../components/MembershipPlanModel';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { MembershipPlansScreenpops, RootStackParamList } from '../../types/navigation';
@@ -88,7 +89,28 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
         restoreError,
         resetRestore,
         purchaseButtonLoading,
+        unconfirmedPayment,
+        retryUnconfirmed,
+        retryingUnconfirmed,
+        checkingStore,
+        paymentPending,
+        purchasePendingApproval,
+        resetPendingApproval,
     } = useMembershipPlans();
+
+    // ✅ Apple's own "manage subscriptions" page (audit #17): buying the plan
+    // you already hold only re-ran the purchase flow, logged a fake conversion
+    // and "succeeded" with nothing bought.
+    const MANAGE_SUBSCRIPTIONS_URL = 'https://apps.apple.com/account/subscriptions';
+
+    useEffect(() => {
+        if (!purchasePendingApproval) return;
+        Alert.alert(
+            t('membership:pendingApproval.title'),
+            t('membership:pendingApproval.message')
+        );
+        resetPendingApproval();
+    }, [purchasePendingApproval]);
 
     useEffect(() => {
         if (restoreResult === "success") {
@@ -102,6 +124,35 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
             Alert.alert(
                 t('membership:restoreNone.title'),
                 t('membership:restoreNone.message')
+            );
+            resetRestore();
+        } else if (restoreResult === "pending") {
+            // ✅ Credited, activated by the server shortly (audit #3) - it
+            // used to say "nothing to restore" here.
+            Alert.alert(
+                t('membership:restorePending.title'),
+                t('membership:restorePending.message')
+            );
+            resetRestore();
+        } else if (restoreResult === "other_account") {
+            // ✅ The subscription belongs to another Livio account (audit #11).
+            Alert.alert(
+                t('membership:restoreOtherAccount.title'),
+                t('membership:restoreOtherAccount.message')
+            );
+            resetRestore();
+        } else if (restoreResult === "credited_other_account") {
+            // ✅ Bought from another Livio account, and credited to it (re-audit PN7).
+            Alert.alert(
+                t('membership:restoreCreditedOther.title'),
+                t('membership:restoreCreditedOther.message')
+            );
+            resetRestore();
+        } else if (restoreResult === "error") {
+            // ✅ A verify failed: not "nothing found" (audit #3).
+            Alert.alert(
+                t('membership:restoreError.title'),
+                t('membership:restoreError.message')
             );
             resetRestore();
         }
@@ -214,6 +265,17 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
             setModalAction(apiPlan.action as ModalActionType);
             return;
         }
+        // ✅ Your current plan: manage it at Apple, do not "buy" it (audit #17).
+        if (apiPlan.action === 'current') {
+            Linking.openURL(MANAGE_SUBSCRIPTIONS_URL);
+            return;
+        }
+        // ✅ Paid and still being activated (audit #4): a second purchase now is
+        // the double charge the user does not want.
+        if (paymentPending) {
+            Alert.alert(t('membership:paymentPending.title'), t('membership:paymentPending.message'));
+            return;
+        }
         console.log("calling the request");
         console.log("requestdata", apiPlan.product_id);
         try {
@@ -267,8 +329,44 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
         return currentLang === 'fr' ? storePrice : formatPriceSymbolFirst(storePrice);
     };
 
+    // ✅ Why the activation cannot be bought right now, if it cannot
+    // (audit #2, #4, #16) - see iapPurchaseFlow.activationBuyBlock.
+    const activationBlock = activationBuyBlock({
+        busy: purchaseLoading || purchaseButtonLoading,
+        unconfirmed: unconfirmedPayment,
+        paymentPending,
+        action: singlePlan?.action,
+        // re-audit PN1: StoreKit not yet asked whether a paid activation is still open
+        checking: checkingStore,
+    });
+
+    // ✅ The banner's "Check again now" answers (re-audit PN6).
+    const handleRetryUnconfirmed = async () => {
+        const still = await retryUnconfirmed();
+        Alert.alert(
+            t(still ? 'membership:unconfirmed.retryStillTitle' : 'membership:unconfirmed.retryDoneTitle'),
+            t(still ? 'membership:unconfirmed.retryStillMessage' : 'membership:unconfirmed.retryDoneMessage')
+        );
+    };
+
     const handleBuyActivation = async () => {
         if (!singlePlan) return;
+        if (activationBlock === 'action') {
+            // The backend does not sell it to this account (e.g. 'hidden' for a
+            // web member): explain, as a plan card does, instead of buying.
+            setModalPlanId(null);
+            setModalAction(singlePlan.action as ModalActionType);
+            return;
+        }
+        if (activationBlock === 'unconfirmed') {
+            Alert.alert(t('membership:unconfirmed.title'), t('membership:unconfirmed.message'));
+            return;
+        }
+        if (activationBlock === 'pending') {
+            Alert.alert(t('membership:paymentPending.title'), t('membership:paymentPending.message'));
+            return;
+        }
+        if (activationBlock === 'busy' || activationBlock === 'checking') return;
         try {
             pendingProductIdRef.current = singlePlan.product_id ?? null;
             await requestPurchase({
@@ -306,6 +404,8 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
     const getBannerText = (): string => {
         if (!plansData) return t('membership:infoBanner.text') as string;
         const { has_membership, source, status, sessions_remaining } = plansData.entitlement;
+        // ✅ Paid, being activated (audit #4) - it read "no membership" here.
+        if (paymentPending) return t('membership:infoBanner.paymentPending') as string;
         if (status === 'grace') return t('membership:infoBanner.grace') as string;
         if (!has_membership) return t('membership:infoBanner.text') as string;
         if (source === 'web') return t('membership:infoBanner.webMembership') as string;
@@ -465,6 +565,39 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
                     </Text>
                 </View>
 
+                {/* ✅ Apple charged, our server has not confirmed it yet (audit #2):
+                    say so, offer a retry, and do NOT offer to buy again. */}
+                {unconfirmedPayment && (
+                    <View style={styles.infoBanner}>
+                        <Ionicons name="time-outline" size={16} color={COLORS.infoText} />
+                        {/* ✅ minWidth 0: the text column shrinks beside the icon (fr / nl
+                            at 320pt). The retry link is one ~18pt text line: hitSlop makes
+                            it a 44pt target without making the banner taller, and
+                            flex-start keeps taps beside the words off it (layout audit 2026-11-26). */}
+                        <View style={{ flex: 1, minWidth: 0 }}>
+                            <Text style={styles.infoBannerText}>
+                                {t('membership:unconfirmed.banner')}
+                            </Text>
+                            <TouchableOpacity
+                                onPress={handleRetryUnconfirmed}
+                                disabled={retryingUnconfirmed}
+                                accessibilityRole="button"
+                                accessibilityState={{ busy: retryingUnconfirmed, disabled: retryingUnconfirmed }}
+                                style={{ alignSelf: 'flex-start', marginTop: space.xs }}
+                                hitSlop={{ top: 13, bottom: 13, left: 8, right: 8 }}
+                            >
+                                {retryingUnconfirmed ? (
+                                    <ActivityIndicator size="small" color={COLORS.infoText} />
+                                ) : (
+                                    <Text style={[styles.infoBannerText, { textDecorationLine: 'underline' }]}>
+                                        {t('membership:unconfirmed.retry')}
+                                    </Text>
+                                )}
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                )}
+
                 {visibleTiers.map(renderPlanCard)}
 
                 {singlePlan && (
@@ -499,7 +632,10 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
                             </Text>
 
                             <TouchableOpacity
-                                style={styles.activationBuyButton}
+                                // ✅ Dimmed whenever it cannot buy (layout audit 2026-11-26): a
+                                // disabled TouchableOpacity looks exactly like a live one, so
+                                // the busy state was invisible. Same as accessibilityState below.
+                                style={[styles.activationBuyButton, activationBlock !== null && { opacity: 0.5 }]}
                                 activeOpacity={0.85}
                                 onPress={handleBuyActivation}
                                 // purchaseButtonLoading too: it is on from the tap until Apple
@@ -508,8 +644,11 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
                                 // and a second tap bought a second activation (support
                                 // 2026-11-26, 22 double charges). The hook also refuses a second
                                 // request (tryBeginPurchase) - this is the visible half.
-                                disabled={purchaseLoading || purchaseButtonLoading}
-                                accessibilityState={{ disabled: purchaseLoading || purchaseButtonLoading, busy: purchaseButtonLoading }}
+                                // ✅ Only 'busy' and 'checking' (StoreKit not asked yet, re-audit PN1)
+                                // disable the press; the other blocks (unconfirmed,
+                                // pending, not sold to this account) answer the tap with why.
+                                disabled={activationBlock === 'busy' || activationBlock === 'checking'}
+                                accessibilityState={{ disabled: activationBlock !== null, busy: purchaseButtonLoading }}
                             >
                                 <Text style={styles.activationBuyText}>
                                     {t('membership:activation.buy')}
@@ -528,9 +667,10 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
                     {t('membership:subscriptionInfo')}
                 </Text>
 
+                {/* ✅ Not during a purchase either (audit #15). */}
                 <TouchableOpacity
                     onPress={restorePurchases}
-                    disabled={restoreLoading}
+                    disabled={restoreLoading || purchaseLoading || purchaseButtonLoading}
                     style={styles.restoreButton}
                 >
                     {restoreLoading ? (
@@ -597,7 +737,17 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
             <PurchaseStatusModal
                 visible={purchaseLoading || !!purchaseError}
                 status={purchaseLoading ? 'processing' : 'error'}
-                errorMessage={purchaseError}
+                // ✅ Our own copy for "charged, not confirmed" (audit #2): the raw
+                // code ("network_error") and "please try again" made people buy twice.
+                errorMessage={
+                    purchaseError === PURCHASE_UNCONFIRMED
+                        ? t('membership:purchase.unconfirmedBody')
+                        : purchaseError === PURCHASE_OTHER_ACCOUNT
+                            ? t('membership:purchase.otherAccountBody')
+                            : purchaseError === PURCHASE_CREDITED_OTHER
+                                ? t('membership:purchase.creditedOtherBody')
+                                : purchaseError
+                }
                 onClose={resetPurchase}
             />
         </SafeAreaView>

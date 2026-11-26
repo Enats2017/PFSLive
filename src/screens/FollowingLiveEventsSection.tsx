@@ -1,5 +1,5 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { View, Text, TouchableOpacity, AppState } from 'react-native';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { FollowingLiveEvent } from './HomeScreen';
 import { commonStyles, spacing, palette, space } from '../styles/common.styles';
@@ -20,19 +20,39 @@ function formatCountdown(totalSec: number): string {
     return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`;
 }
 
+/**
+ * Seconds to the gun: `starts_in_seconds` was true when the list arrived.
+ *
+ * ✅ Measured from when THIS list arrived, not from when the section mounted
+ * (app audit 2026-11-26). Home refetches on every focus and every 5 min while
+ * the section stays mounted, so "fresh starts_in − time since mount" counted
+ * the elapsed time twice: back on Home after 10 min, a race 20 min away read
+ * 10 min, and Live showed before the gun.
+ */
+export function secondsToStart(startsInSeconds: number | null | undefined, receivedAtMs: number, nowMs: number): number {
+    const elapsed = Math.max(0, Math.floor((nowMs - receivedAtMs) / 1000));
+    return Math.max(0, (startsInSeconds || 0) - elapsed);
+}
+
 const FollowingLiveEventsSection: React.FC<Props> = ({ events, onRoutePress }) => {
     const { t } = useTranslation(['home', 'common']);
-    const mountTimeRef = useRef(Date.now());
-    const [elapsed, setElapsed] = useState(0);
+    // A new `events` array = a new answer from home_api: re-anchor on it.
+    const receivedAt = useMemo(() => Date.now(), [events]);
+    const [now, setNow] = useState(() => Date.now());
 
     useEffect(() => {
+        setNow(Date.now());
         const hasUpcoming = events.some(e => e.race_status === 'upcoming');
         if (!hasUpcoming) return;
         const interval = setInterval(() => {
-            setElapsed(Math.floor((Date.now() - mountTimeRef.current) / 1000));
+            setNow(Date.now());
         }, 1000);
+        // Timers pause in the background: read the clock again on return.
+        const sub = AppState.addEventListener('change', (next) => {
+            if (next === 'active') setNow(Date.now());
+        });
 
-        return () => clearInterval(interval);
+        return () => { clearInterval(interval); sub.remove(); };
     }, [events]);
 
     return (
@@ -44,7 +64,7 @@ const FollowingLiveEventsSection: React.FC<Props> = ({ events, onRoutePress }) =
             </View>
 
             {events.map((event, eventIdx) => {
-                const remainingSec = Math.max(0, (event.starts_in_seconds || 0) - elapsed);
+                const remainingSec = secondsToStart(event.starts_in_seconds, receivedAt, now);
                 const isLive = event.race_status === 'in_progress' || (event.race_status === 'upcoming' && remainingSec === 0);
                 const isUpcoming = event.race_status === 'upcoming' && remainingSec > 0;
 

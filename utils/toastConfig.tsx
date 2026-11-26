@@ -61,6 +61,14 @@ const TOAST_CONFIG: Record<
   },
 };
 
+/* ✅ Line caps measured against every toast the app shows (layout audit
+   2026-11-26, tests/ui_orientation/group2.test.js): 1 title / 2 message lines
+   cut most of them with "…" - a whole sentence passed as the only (title)
+   text takes up to 4 lines at 320pt with ×1.35 text, the longest message
+   (fr / nl) up to 8. Short toasts are as small as before: these are caps. */
+const TITLE_LINES = 4;
+const BODY_LINES = 8;
+
 /* ✅ Main Animated Component */
 const AnimatedToast: React.FC<AnimatedToastProps> = ({
   text1,
@@ -147,7 +155,7 @@ const AnimatedToast: React.FC<AnimatedToastProps> = ({
           {text1 ? (
             <Text
               style={[styles.text, { color: config.text }]}
-              numberOfLines={1}
+              numberOfLines={TITLE_LINES}
             >
               {text1}
             </Text>
@@ -159,7 +167,7 @@ const AnimatedToast: React.FC<AnimatedToastProps> = ({
                 styles.text,
                 { color: config.text, fontSize: 12, marginTop: 2 },
               ]}
-              numberOfLines={2}
+              numberOfLines={BODY_LINES}
             >
               {text2}
             </Text>
@@ -189,7 +197,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 16,
     paddingVertical: 10,
-    borderRadius: 999,
+    // ✅ 20, not 999 (layout audit 2026-11-26): a one-line toast is ~40pt tall,
+    // so it stays a pill; a multi-line one is a rounded box - with 999 its
+    // corners curved in over the first / last line's text.
+    borderRadius: 20,
     borderWidth: 1,
     shadowColor: "#000",
     shadowOpacity: 0.08,

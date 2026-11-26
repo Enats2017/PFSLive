@@ -32,9 +32,11 @@ import {
   startBackgroundFetchKeepalive, stopBackgroundFetchKeepalive,
   isTracking, getTrackingParams, stopWatching, attachUi, detachUi, rehydrateTracking,
   LOG_UPLOADED_KEY, getFullTrackingLog,PENDING_FINISH_KEY, FINAL_SENT_COUNT_KEY,
-  GPS_HEALTH_KEY, maybeUploadInterimLog, START_BACKGROUNDED_CODE,
+  GPS_HEALTH_KEY, maybeUploadInterimLog, START_BACKGROUNDED_CODE, addLog, getSessionActivity,
+  isLogUploadTaken, logClaimValue,
 } from '../services/gpsService';
-import { isStaleSession, computeRaceStartTime, shouldResumePendingStart } from '../services/trackingSessionRules';
+import { isStaleSession, computeRaceStartTime, shouldResumePendingStart, isPreviousDaySession } from '../services/trackingSessionRules';
+import { trackingLifecycle, STOP_STUCK_MS } from '../services/trackingLifecycle';
 import { startReminderService } from '../services/startReminderService';
 import { QUEUE_COUNT_KEY } from '../services/locationQueueService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -146,6 +148,11 @@ export const PENDING_START_MAX_MS = 15 * 60 * 1000;
 // settles — half-open socket, stuck native call): a new Start is let through
 // instead of being ignored until the screen remounts (see startingAtRef).
 export const START_STUCK_MS = 60 * 1000;
+
+// ✅ How long a Start waits for a running Stop / Stop-log retry before giving
+// up with a message (2026-11-26 re-audit). A Stop drains ≤ 30 s and uploads its
+// log ≤ 12 s; stays below START_STUCK_MS so the waiting start keeps its guard.
+export const START_WAIT_FOR_STOP_MS = 50 * 1000;
 
 // screen_ready already logged (race key | local day) — see the effect that logs it.
 const screenReadyClaimed = new Set<string>();
@@ -296,6 +303,15 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const [startErrorMessage, setStartErrorMessage] = useState<string | null>(null);
   const [showOverrideModal, setShowOverrideModal] = useState(false);
 
+  // ✅ A Stop is running (2026-11-26 audit) — the button reads "Stopping…" and
+  // Start is refused until it is done (trackingLifecycle owns the real lock).
+  const [isStopping, setIsStopping] = useState(false);
+  // ✅ The login was rejected (401): 'tracking' = session kept, log in again to
+  // keep sending; 'ended' = logged out, no session running. null = closed.
+  const [loginPrompt, setLoginPrompt] = useState<null | 'tracking' | 'ended'>(null);
+  // Asked once per rejected token, not on every 5-min poll.
+  const loginPromptShownRef = useRef(false);
+
   // ✅ Notification popup state
   const [notificationPopup, setNotificationPopup] = useState<{
     visible: boolean;
@@ -343,11 +359,19 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   // ✅ A start is running (gate → fresh fetch → engine start: seconds on a
   // race-day network). A second tap / "Start anyway" / the return listener
   // used to run a SECOND doStartGPSTracking alongside it — two engine starts.
-  const startingRef = useRef(false);
+  // ✅ APP-WIDE (2026-11-26 final check): the lifecycle's shared objects, not a
+  // per-screen useRef — Start, header-home remount, Start again on the new
+  // screen ran two engine starts at once. Same shape ({ current }), so every
+  // guard and the finally below work unchanged.
+  const startingRef = trackingLifecycle.startingRef;
   // When that start began: one older than START_STUCK_MS no longer blocks a
   // new Start, and only the newest start clears startingRef in its finally.
-  const startingAtRef = useRef(0);
+  const startingAtRef = trackingLifecycle.startingAtRef;
   const isStarting = () => startingRef.current && Date.now() - startingAtRef.current < START_STUCK_MS;
+  // ✅ False once this screen is unmounted (the header's home icon resets the
+  // stack → a NEW HomeScreen). A Start still running on the old one must not
+  // start timers nobody clears, and must hand its session to the new one.
+  const mountedRef = useRef(true);
   // ✅ Ref so GPS callback always reads current value without stale closure
   const isSendingDataRef = useRef<boolean>(false);
   // ✅ Ref to tracking params — needed by watchdog to restart task if killed
@@ -472,11 +496,15 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   // ✅ Background/killed tap — register handler so hook can navigate immediately
   useEffect(() => {
     setOnNotificationTap((data: NotificationData) => {
+      // ✅ The same push may already sit in the in-app popup (it arrived in the
+      // foreground, then the runner tapped the OS banner): close it, or "View"
+      // under it opened the screen a second time (2026-11-26 re-audit).
+      closeNotificationPopup();
       navigateToResultDetails(data);
     });
 
     return () => setOnNotificationTap(null);
-  }, [navigateToResultDetails, setOnNotificationTap]);
+  }, [navigateToResultDetails, setOnNotificationTap, closeNotificationPopup]);
 
   // ✅ Show notification registration status (DEBUG only)
   useEffect(() => {
@@ -564,7 +592,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     showStartConfirmModal || showEarlyTrackingModal ||
     showLocationPermissionModal || showPowerSavingModal || notificationPopup.visible ||
     showFanEmailModal || stopConfirmMode !== null || startErrorMessage !== null ||
-    showOverrideModal || showBatteryStartModal;
+    showOverrideModal || showBatteryStartModal || loginPrompt !== null;
   // Read at the last moment by maybeOpen (its checks are async — a popup can
   // open, or Start be pressed, while they run).
   // Focus is a dep of the race-ready trigger: when Home wasn't on screen as
@@ -712,9 +740,47 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     }
   }, []);
 
+  // ✅ A rejected login (401 / action 'unauthorized') used to be handled
+  // SILENTLY — token removed, logout() swapped the navigator, home emptied — also
+  // in the middle of a race (2026-11-26 audit). The engine kept recording, every
+  // send failed 401 and queued, and the runner saw nothing but a growing queue
+  // (the 20-min "not sending" warning then blamed mobile data).
+  //  - session live → token AND session kept (fixes keep queuing; 'unauthorized'
+  //    is never a permanent reject, so none is dropped) and the runner is asked
+  //    to log in again; the queue drains under the new token.
+  //  - no session → logged out as before, but told so instead of silently.
+  // No token sent at all → nothing to tell (a fan), the old silent path.
+  const handleUnauthorized = useCallback(async (hadToken: boolean) => {
+    // ✅ A Start in progress counts as live (2026-11-26 re-audit): a 401 on the
+    // Start's own fresh home fetch logged the runner out while the start went on
+    // with old home data and no token. Kept + asked to log in, like mid-race.
+    let live = isGPSActiveRef.current || isStarting();
+    if (!live) {
+      try { live = await isTracking(); } catch { /* unreadable → not live */ }
+    }
+    if (live && hadToken) {
+      if (!loginPromptShownRef.current) {
+        loginPromptShownRef.current = true;
+        setLoginPrompt('tracking');
+      }
+      return;
+    }
+    await tokenService.removeToken();
+    logout();
+    setHasToken(false);
+    setHomeData(null);
+    // Logged out → no "start tracking" reminder for a race this phone no longer shows.
+    void startReminderService.cancel();
+    if (hadToken && !loginPromptShownRef.current) {
+      loginPromptShownRef.current = true;
+      setLoginPrompt('ended');
+    }
+  }, [logout]);
+
   const fetchHomeData = useCallback(async (fresh: boolean = false): Promise<HomeData | null> => {
+    let token: string | null = null;
     try {
-      const token = await tokenService.getToken();
+      token = await tokenService.getToken();
       const deviceId = await getDeviceId();
 
       // ✅ Do NOT bail out when there is no token. A not-logged-in fan still
@@ -757,16 +823,15 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           console.log('🔐 Token invalid/expired - clearing session silently');
         }
 
-        await tokenService.removeToken();
-        logout();
-        setHasToken(false);
-        setHomeData(null);
+        await handleUnauthorized(!!token);
         setLoading(false);
         return null;
       }
 
       // ✅ Normal success flow
       if (response.data.success && response.data.data) {
+        // A token that works again (logged in anew) may be asked about again.
+        if (token) loginPromptShownRef.current = false;
         setHomeData(response.data.data);
         console.log("11111", response.data.data);
 
@@ -816,10 +881,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           console.log('🚨 401 Unauthorized - clearing session silently');
         }
 
-        await tokenService.removeToken();
-        logout();
-        setHasToken(false);
-        setHomeData(null);
+        await handleUnauthorized(!!token);
         return null;
       }
 
@@ -831,7 +893,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       setLoading(false);
     }
     return null;
-  }, [logout]);
+  }, [handleUnauthorized]);
 
   // ==================== GPS TRACKING ====================
 
@@ -955,6 +1017,19 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     const allowApproximate = allowApproximateRef.current;
     allowApproximateRef.current = false;
     try {
+      // ✅ Never beside a Stop or the Stop-log retry (trackingLifecycle,
+      // 2026-11-26): an old Stop still draining wrote into this new session.
+      // WAITED for, not refused — a resumed start (back from Settings, the
+      // pocketed-Android resume on a cold start) used to be dropped silently
+      // while the lock was held (re-audit). Only a lock still held after the
+      // wait gives up, and says so.
+      if (!(await trackingLifecycle.waitUntilFree(START_WAIT_FOR_STOP_MS))) {
+        toastError(t('home:tracking.stopInProgressTitle'), t('home:tracking.stopInProgressBody'));
+        return;
+      }
+      // Any Stop from here on — from THIS screen or a new one after a remount —
+      // must take the engine down once it is up (see the check after it).
+      const stopEpochAtStart = trackingLifecycle.stopEpoch();
       // ── BATTERY SAVER GATE — on EVERY start path (2026-10-20) ────────────
       // startGPSTracking (the button) already refuses Battery Saver / Low Power
       // Mode, but the resumed starts call this function directly: back from the
@@ -1150,6 +1225,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       const startParticipantId = raceData?.next_race_participant_app_id ?? participantId;
       const startEventId = raceData?.next_race_id ?? eventId;
 
+      // A Stop suspended earlier (iOS) that resumes now must not write into this session.
+      trackingLifecycle.noteEngineStart();
       const gpsWatch = await gpsService.startWatchingPosition(
         async (gpsPosition) => {
           if (!isGPSActiveRef.current) {
@@ -1189,6 +1266,19 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                                                               //    BACKGROUND finish send race_name
       );
 
+      // ✅ Stopped WHILE the engine was starting (2026-11-26 audit). isGPSActive
+      // goes true before startWatchingPosition (the card shows at once), so Stop
+      // could be pressed in that window: it found no handle, tore nothing down,
+      // and the engine then came up anyway — sending, safety notifications armed,
+      // timers started — under a screen showing Start. The runner's Stop wins:
+      // take the fresh engine straight down and do nothing else.
+      // A Stop on ANOTHER (remounted) screen counts too — it bumped the shared
+      // stop epoch; this screen's own ref never saw it (re-audit: orphan engine).
+      if ((mountedRef.current && !isGPSActiveRef.current) || trackingLifecycle.stopEpoch() !== stopEpochAtStart) {
+        try { await gpsWatch.remove(); } catch { /* silent */ }
+        return;
+      }
+
       gpsWatchRef.current = gpsWatch;
       setSessionRaceName(raceData?.next_race_name);
 
@@ -1216,10 +1306,19 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         notificationBody: t('home:tracking.backgroundNotificationBody'),
       };
 
-      startQueueProcessor();
+      // ✅ This screen was unmounted while the engine started (header home icon =
+      // stack reset → a new HomeScreen, 2026-11-26 audit). Timers started here
+      // would never be cleared (the unmount cleanup already ran), and the new
+      // screen restored nothing (no session existed when it mounted) — it showed
+      // Start over a running engine. Hand the session to the mounted screen.
+      if (!mountedRef.current) {
+        trackingLifecycle.notifySessionStarted();
+      } else {
+        startQueueProcessor();
 
-      if (raceData?.manual_start !== 1) {
-        startRaceStartChecker();
+        if (raceData?.manual_start !== 1) {
+          startRaceStartChecker();
+        }
       }
 
       let message = '';
@@ -1359,6 +1458,11 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   // Opens the confirm popup (button now calls this instead of startGPSTracking)
   const confirmStartTracking = useCallback(() => {
     if (isStarting()) return; // tapped mid-start
+    // ✅ A real Stop still draining (only the log retry → the start waits for it).
+    if (trackingLifecycle.holder() === 'stop') {
+      toastError(t('home:tracking.stopInProgressTitle'), t('home:tracking.stopInProgressBody'));
+      return;
+    }
     // A new tap is a new decision: a start left armed by an earlier blocked
     // attempt must not fire on a later foreground if this one is declined.
     pendingStartRef.current = false;
@@ -1404,7 +1508,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   // raceAlreadyFinished property, so the flag reads as undefined and we fall
   // back to the AsyncStorage check — which is the correct behaviour for a
   // manual stop.
-  const stopGPSTracking = useCallback(async (opts?: { raceAlreadyFinished?: boolean }) => {
+  const runStopGPSTracking = useCallback(async (opts?: { raceAlreadyFinished?: boolean; quiet?: boolean }) => {
     // ✅ FIRST — read the actual sent count from AsyncStorage BEFORE we tear
     //    anything down. When auto-stop fires after a background→active
     //    transition, the 1s sync interval hasn't run (JS suspended in bg), so
@@ -1434,6 +1538,24 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         stopEventId = String(sp.eventId);
       }
     } catch { /* silent — keep home ids */ }
+    // ✅ No session params (a live-path finish already removed them): the
+    // pending finish record holds the RIGHT ids (2026-11-26 final check). Home's
+    // ids are only the last resort — on the Soupe Sunday home already offers the
+    // Sunday registration, and Saturday's log was re-pointed at it.
+    if (stopParticipantId === participantId && stopEventId === eventId) {
+      try {
+        const pf = JSON.parse((await AsyncStorage.getItem(PENDING_FINISH_KEY)) || 'null');
+        if (pf?.participantId && pf?.eventId && !(await getTrackingParams())) {
+          stopParticipantId = String(pf.participantId);
+          stopEventId = String(pf.eventId);
+        }
+      } catch { /* silent — keep home ids */ }
+    }
+    // ✅ This Stop's session (2026-11-26 final check): an iOS Stop suspended
+    // mid-drain that resumes after a NEW Start must not write its pending key,
+    // logUploaded or counter clears into that new session.
+    const startEpochAtStop = trackingLifecycle.startEpoch();
+    const superseded = () => trackingLifecycle.startEpoch() !== startEpochAtStop;
 
     if (gpsWatchRef.current) {
       // ✅ Await full teardown before the log upload below. remove() →
@@ -1443,6 +1565,20 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       // try/catch so a teardown hiccup can't block the upload/toast.
       try { await gpsWatchRef.current.remove(); } catch { /* silent */ }
       gpsWatchRef.current = null;
+    }
+
+    // ✅ The log upload below runs only while Livio stays alive (2026-11-26
+    // audit): swiped away — or suspended by iOS, the stopped engine no longer
+    // keeps the app awake — during the drain, and the server never got the stop.
+    // The watch cron could then push "Livio stopped tracking" to a runner who
+    // meant to stop, and support had no log. Marked pending like a finish: the
+    // drain-pending-finish effect uploads it on the next open / foreground
+    // (deduped by LOG_UPLOADED_KEY); the upload below clears it. Written AFTER
+    // the teardown, so that effect can tell it from a live session.
+    if (stopParticipantId && stopEventId && !superseded()) {
+      try {
+        await AsyncStorage.setItem(PENDING_FINISH_KEY, JSON.stringify({ participantId: stopParticipantId, eventId: stopEventId }));
+      } catch { /* silent — the upload below still runs */ }
     }
 
     if (queueProcessorRef.current) {
@@ -1532,15 +1668,24 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     } catch { /* silent */ }
 
     setQueuedCount(remaining);
+    trackingLifecycle.touchStop();   // milestone: drained — still alive
 
-    if (stopParticipantId && stopEventId) {
+    if (stopParticipantId && stopEventId && !superseded()) {
       try {
         // ✅ If the background auto-stop path already uploaded the log when the
         // finish was crossed (LOG_UPLOADED_KEY === '1'), skip re-uploading. For a
         // manual stop, or a finish crossed while foregrounded, the flag is unset
         // and we upload here as before.
+        // ✅ The final counts travel with the pending retry (re-audit): if Livio
+        // dies during the upload below, the retry used to send totalSent=0 —
+        // the counter is cleared at the end of this Stop.
+        await AsyncStorage.setItem(PENDING_FINISH_KEY, JSON.stringify({
+          participantId: stopParticipantId, eventId: stopEventId, sent: actualSentCount, queued: remaining,
+        }));
+        // Settled = uploaded, or nothing (left) to upload → the pending retry goes.
+        let logSettled = true;
         const alreadyUploaded = await AsyncStorage.getItem(LOG_UPLOADED_KEY);
-        if (alreadyUploaded !== '1') {
+        if (!isLogUploadTaken(alreadyUploaded)) {
           const logs = await getFullTrackingLog();
           if (logs.length > 0) {
             // Claim BEFORE the network call, mirroring _uploadTrackingLogOnFinish.
@@ -1548,7 +1693,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             // the background finish path read "not uploaded" and uploaded the same
             // log again — the duplicate rows seen on 2026-08-23. Released again if
             // the save fails so the other path can still retry.
-            await AsyncStorage.setItem(LOG_UPLOADED_KEY, '1');
+            // A recoverable claim (gpsService LOG_CLAIM_STALE_MS): '1' only once confirmed.
+            await AsyncStorage.setItem(LOG_UPLOADED_KEY, logClaimValue());
             const uploaded = await locationService.saveTrackingLog(
               stopParticipantId,
               stopEventId,
@@ -1557,22 +1703,32 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
               remaining,
             );
             if (uploaded === false) {
+              logSettled = false;
               try { await AsyncStorage.removeItem(LOG_UPLOADED_KEY); } catch { /* silent */ }
+            } else {
+              await AsyncStorage.setItem(LOG_UPLOADED_KEY, '1');
             }
           }
+        } else if (alreadyUploaded !== '1') {
+          // Another upload is still running: it owns the outcome; keep the retry.
+          logSettled = false;
         }
+        if (logSettled) await AsyncStorage.removeItem(PENDING_FINISH_KEY);
       } catch { /* silent */ }
     }
 
     fetchHomeData();
 
-    toastSuccess(
-      t('home:tracking.gpsStopped'),
-      t('home:tracking.trackingStopped', {
-        sent: actualSentCount,   // ✅ was: locationUpdateCount
-        queued: remaining,
-      })
-    );
+    // quiet: an earlier day's session retired by the screen — its own toast says why.
+    if (!opts?.quiet) {
+      toastSuccess(
+        t('home:tracking.gpsStopped'),
+        t('home:tracking.trackingStopped', {
+          sent: actualSentCount,   // ✅ was: locationUpdateCount
+          queued: remaining,
+        })
+      );
+    }
     
     // Both actualSentCount and remaining are final at this point (post-drain,
     // post-fallback reads). On a background finish this is usually a no-op:
@@ -1588,9 +1744,11 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     });
     setSessionRaceName(undefined);
 
-    AsyncStorage.removeItem(BACKGROUND_SENT_COUNT_KEY).catch(() => { });
-    AsyncStorage.removeItem(FINAL_SENT_COUNT_KEY).catch(() => { });
-    setLocationUpdateCount(0);
+    if (!superseded()) {
+      AsyncStorage.removeItem(BACKGROUND_SENT_COUNT_KEY).catch(() => { });
+      AsyncStorage.removeItem(FINAL_SENT_COUNT_KEY).catch(() => { });
+      setLocationUpdateCount(0);
+    }
 
     // ✅ Anything the stop-drain could not send is handed to the leftover drain
     // (it parks the queue now that the session is over, and keeps retrying on
@@ -1602,6 +1760,42 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     // never sends a live session's own fixes.
     void locationService.drainOrphans();
   }, [locationUpdateCount, participantId, eventId, sessionRaceName, t]);
+
+  // ✅ ONE Stop at a time, app-wide (2026-11-26 audit — see trackingLifecycle).
+  // A second Stop tapped while the first tore the engine down, or the 1 s finish
+  // tick and the foreground handler both seeing raceFinished, ran the whole stop
+  // twice (two drains, two log uploads, two toasts). And while a Stop drained /
+  // uploaded, Start was already back on screen; a restart then had the old Stop
+  // set logUploaded=1 and wipe the sent counter of the NEW session. The claim is
+  // synchronous, so a second caller in the same tick gets nothing; Start is
+  // refused until the Stop is done (confirmStartTracking / doStartGPSTracking).
+  // Resolves true when THIS call ran the Stop, false when another one held it.
+  const stopGPSTracking = useCallback(async (opts?: { raceAlreadyFinished?: boolean; quiet?: boolean }): Promise<boolean> => {
+    // ✅ The old-log retry never costs a Stop (2026-11-26 re-audit): the finish
+    // Stop was refused while it uploaded and the finish flag was lost; "Stop
+    // anyway" did nothing. Wait for it (≤ LOG_RETRY_WAIT_MS); only another real
+    // Stop refuses this one.
+    await trackingLifecycle.waitForLogRetry();
+    const release = trackingLifecycle.beginStop();
+    if (!release) return false;
+    setIsStopping(true);
+    // ✅ A Stop whose await never settles frees the lock after STOP_STUCK_MS
+    // (trackingLifecycle); "Stopping…" goes with it, or the button kept saying
+    // Stopping while it already acted as Start / Stop again (2026-11-26 review).
+    const stuck = setTimeout(() => setIsStopping(false), STOP_STUCK_MS);
+    // ✅ Suspended by iOS (phone locked) mid-drain is not "hung": coming back
+    // to the foreground refreshes the lock before any new Start can be tapped.
+    const alive = AppState.addEventListener('change', (st) => { if (st === 'active') trackingLifecycle.touchStop(); });
+    try {
+      await runStopGPSTracking(opts);
+    } finally {
+      alive.remove();
+      clearTimeout(stuck);
+      release();
+      setIsStopping(false);
+    }
+    return true;
+  }, [runStopGPSTracking]);
 
   // ✅ Stop pressed BEFORE the gun → confirm first. Sep-Oct 2026: 12 runners
   // started early, stopped before the start (nothing is sent pre-gun, so it
@@ -1743,7 +1937,12 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         const raceFinished = await AsyncStorage.getItem(RACE_FINISHED_KEY);
         if (raceFinished === '1') {
           await AsyncStorage.removeItem(RACE_FINISHED_KEY);
-          await stopGPSTracking({ raceAlreadyFinished: true });
+          // ✅ Never lose the finish (2026-11-26 re-audit): a Stop refused
+          // (lock still held after its wait) put the flag back so the next tick
+          // retries — unless a real Stop is already ending this session.
+          if (!(await stopGPSTracking({ raceAlreadyFinished: true })) && trackingLifecycle.holder() !== 'stop') {
+            await AsyncStorage.setItem(RACE_FINISHED_KEY, '1');
+          }
         }
       } catch { /* silent */ }
 
@@ -1768,7 +1967,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   // isn't kept warm on a defunct screen) and clear the screen-scoped timers.
   // Transistor's background service keeps running.
   useEffect(() => {
+    mountedRef.current = true;
     return () => {
+      mountedRef.current = false;
       if (queueProcessorRef.current) clearInterval(queueProcessorRef.current);
       if (raceStartCheckRef.current) clearInterval(raceStartCheckRef.current);
       // Detach the foreground UI watch (does NOT stop Transistor).
@@ -1785,6 +1986,17 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   // everything back up so the screen shows the correct state and the Stop
   // button works.
   const hasRestoredRef = useRef(false);
+  // ✅ Re-run the restore when a Start finished on an unmounted HomeScreen
+  // (trackingLifecycle.notifySessionStarted, 2026-11-26 audit).
+  const [restoreNonce, setRestoreNonce] = useState(0);
+  // A restore is running / just settled — the previous-day check below waits
+  // for it (it must not stop a session the restore is still wiring up).
+  const restoreInFlightRef = useRef(false);
+  const [restoreSettled, setRestoreSettled] = useState(0);
+  useEffect(() => trackingLifecycle.onSessionStarted(() => {
+    hasRestoredRef.current = false;
+    setRestoreNonce((n) => n + 1);
+  }), []);
 
   useEffect(() => {
     if (hasRestoredRef.current) return;
@@ -1863,6 +2075,25 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         // alone does not. It also re-attaches the listeners itself.
         await rehydrateTracking();
 
+        // ✅ rehydrateTracking can END the session itself (2026-11-26 audit): its
+        // stale rule also judges a session with no stored gun by when Start was
+        // pressed, which the check above cannot see. This screen then kept
+        // "Tracking active" + Stop over a stopped engine, hiding today's Start.
+        // Session gone (and not a finish the 1 s tick still has to close) →
+        // undo the restore; its leftovers go to drainOrphans.
+        if (!(await isTracking()) && (await AsyncStorage.getItem(RACE_FINISHED_KEY)) !== '1') {
+          setIsGPSActive(false);
+          isGPSActiveRef.current = false;
+          isSendingDataRef.current = false;
+          setIsSendingData(false);
+          gpsWatchRef.current = null;
+          trackingParamsRef.current = null;
+          setSessionRaceName(undefined);
+          hasRestoredRef.current = false;
+          void locationService.drainOrphans();
+          return;
+        }
+
         // Re-attach the foreground UI callback so live lat/lon updates resume
         // on this screen instance. Transistor's background sends continue
         // independently of this — this only drives the screen display.
@@ -1889,12 +2120,47 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       }
     };
 
-    restore();
+    restoreInFlightRef.current = true;
+    restore().finally(() => {
+      restoreInFlightRef.current = false;
+      setRestoreSettled((n) => n + 1);
+    });
 
     return () => {
       cancelled = true;
     };
-  }, [hasRaceStarted, startQueueProcessor, startRaceStartChecker, t]);
+  }, [hasRaceStarted, startQueueProcessor, startRaceStartChecker, t, restoreNonce]);
+
+  // ✅ A session from an EARLIER DAY while home offers today's race to a
+  // different registration (2026-11-26 audit, Trail de la Soupe Challenge: one
+  // registration per day, Sunday's gun only 19.5 h / 21 h after Saturday's, so
+  // the 24 h stale rule let an unclosed Saturday session take over Sunday). The
+  // rule is precise on purpose — see isPreviousDaySession; it is NOT the
+  // rejected "home offers another race" stop (still-on-course runners). Stopped
+  // through the normal Stop: queued fixes drain, the log uploads, leftovers go
+  // to drainOrphans. Checked once home has answered and the restore settled.
+  const stopForPreviousDayRef = useRef(stopGPSTracking);
+  stopForPreviousDayRef.current = stopGPSTracking;
+  useEffect(() => {
+    if (!isGPSActive || !homeData || restoreInFlightRef.current || !serverTimeOffsetKnownRef.current) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        if (isStarting() || trackingLifecycle.isStopping()) return;
+        const params = await getTrackingParams();
+        if (cancelled || !isGPSActiveRef.current) return;
+        // Still sending on an overnight course → not stale (see isPreviousDaySession).
+        const activity = await getSessionActivity();
+        if (cancelled || !isPreviousDaySession(params, homeData, Date.now(), serverTimeOffsetRef.current, activity)) return;
+        await addLog('🧹', `Session from an earlier day (participant ${params?.participantId}) — home offers participant ${homeData.next_race_participant_app_id} today, no send for ${activity.lastSentAt ? Math.round((Date.now() - activity.lastSentAt) / 60000) + ' min' : 'the whole session'}; stopped`);
+        // Only when THIS call stopped it: another Stop running already says its own thing.
+        if (await stopForPreviousDayRef.current({ quiet: true })) {
+          toastSuccess(t('home:tracking.previousDayStoppedTitle'), t('home:tracking.previousDayStoppedBody'));
+        }
+      } catch { /* silent — this check must never break tracking */ }
+    })();
+    return () => { cancelled = true; };
+  }, [homeData, isGPSActive, restoreSettled, t]);
 
   // NOTE (2026-10-18 audit): there is deliberately NO "home offers a different
   // race → stop the live session" check here. home_api drops a race once its
@@ -2042,6 +2308,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     void startReminderService.sync({
       gun,
       eligible: homeData?.show_start_track === 1 && !!homeData?.next_race_participant_app_id && !isGPSActive,
+      // ✅ Owner of the reminders (re-audit 2026-11-26): a personal-event
+      // delete / edit cancels them only when it is this race.
+      participantId: homeData?.next_race_participant_app_id ?? null,
       texts: {
         preTitle: t('home:reminders.preTitle'),
         preBody: t('home:reminders.preBody'),
@@ -2078,7 +2347,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
               const raceFinished = await AsyncStorage.getItem(RACE_FINISHED_KEY);
               if (raceFinished === '1') {
                 await AsyncStorage.removeItem(RACE_FINISHED_KEY);
-                await stopGPSTracking({ raceAlreadyFinished: true });
+                // Same rule as the 1 s tick: a refused finish Stop keeps its flag.
+                if (!(await stopGPSTracking({ raceAlreadyFinished: true })) && trackingLifecycle.holder() !== 'stop') {
+                  await AsyncStorage.setItem(RACE_FINISHED_KEY, '1');
+                }
                 return;
               }
 
@@ -2163,12 +2435,17 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       };
 
       let intervalId: ReturnType<typeof setInterval> | null = null;
+      // ✅ Unfocused before checkTokenAndPoll resolved (2026-11-26 audit): the
+      // cleanup saw no id yet and the poll ran forever, one more per refocus.
+      let unfocused = false;
 
       checkTokenAndPoll().then(interval => {
+        if (unfocused) { clearInterval(interval); return; }
         intervalId = interval;
       });
 
       return () => {
+        unfocused = true;
         if (intervalId) {
           clearInterval(intervalId);
           if (API_CONFIG.DEBUG) console.log('📴 Unfocused - Stopped polling');
@@ -2187,25 +2464,61 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     let cancelled = false;
 
     const drainPendingFinish = async () => {
+      // ✅ Never beside a running Stop (2026-11-26 review). A manual Stop marks
+      // its log pending BEFORE its drain + upload (≤ 42 s); a foreground or a
+      // remount in that window claimed LOG_UPLOADED here and uploaded with
+      // mid-drain counts — and the two read-then-write claims could both upload
+      // (duplicate oc_tracking_logs_app rows). The retry takes the same lock as
+      // Stop (trackingLifecycle) for its whole read → claim → upload: no Stop,
+      // no other retry (a second foreground, a second HomeScreen) runs beside it,
+      // and a Start waits for it like for a Stop.
+      // Nothing pending (almost every open) → never take the lock at all.
+      try { if (!(await AsyncStorage.getItem(PENDING_FINISH_KEY))) return; } catch { return; }
+      // ✅ Never while a Start runs anywhere (2026-11-26 final check): between
+      // the Start's wait and its engine start nothing is "tracking" yet, and the
+      // retry's '1' landed after the Start cleared it — the new session's own
+      // log was then skipped.
+      if (trackingLifecycle.isStarting()) return;
+      const release = trackingLifecycle.beginStop(undefined, 'logRetry');
+      if (!release) return;
       try {
         const pendingStr = await AsyncStorage.getItem(PENDING_FINISH_KEY);
         if (!pendingStr || cancelled) return;
+        // ✅ A session is live (2026-11-26 audit): the stored log is the LIVE
+        // session's, not the ended one's — uploading it under the old ids set
+        // logUploaded=1 and this session's own finish log was then skipped. A new
+        // Start drops the pending key itself (startWatchingPosition).
+        if (await isTracking()) return;
 
-        const alreadyUploaded = (await AsyncStorage.getItem(LOG_UPLOADED_KEY)) === '1';
+        // ✅ Recoverable claim (re-audit): '1' = uploaded; a fresh 'claim:' = an
+        // upload still running elsewhere (leave the pending key, retry later); a
+        // stale claim = an upload that died with the app — taken over.
+        const uploadedState = await AsyncStorage.getItem(LOG_UPLOADED_KEY);
+        if (uploadedState !== '1' && isLogUploadTaken(uploadedState)) return;
+        const alreadyUploaded = uploadedState === '1';
         if (!alreadyUploaded) {
           let pid = '', eid = '';
+          // Counts kept with the pending record by the Stop (re-audit): the live
+          // counter is cleared at the end of a Stop, so it read 0 here.
+          let keptSent: number | null = null, keptQueued: number | null = null;
           try {
             const p = JSON.parse(pendingStr);
             pid = p?.participantId ?? '';
             eid = p?.eventId ?? '';
+            if (typeof p?.sent === 'number') keptSent = p.sent;
+            if (typeof p?.queued === 'number') keptQueued = p.queued;
           } catch { /* malformed — nothing to upload */ }
 
           if (pid && eid) {
             const logs = await getFullTrackingLog();
             if (logs.length > 0) {
-              const remaining = await locationQueueService.getQueueSize();
+              const remaining = keptQueued ?? await locationQueueService.getQueueSize();
               const sentStr = await AsyncStorage.getItem(BACKGROUND_SENT_COUNT_KEY);
-              const sent = sentStr ? (parseInt(sentStr) || 0) : 0;
+              const finalStr = await AsyncStorage.getItem(FINAL_SENT_COUNT_KEY);
+              const sent = keptSent ?? Math.max(sentStr ? (parseInt(sentStr) || 0) : 0, finalStr ? (parseInt(finalStr) || 0) : 0);
+              // Re-checked right before the claim: a Start since the first check
+              // means the stored log is the NEW session's.
+              if (await isTracking() || trackingLifecycle.isStarting()) return;
               // CLAIM BEFORE UPLOADING — same rule as _uploadTrackingLogOnFinish.
               //
               // This effect runs on mount AND on every foreground transition, so
@@ -2214,13 +2527,22 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
               // 2026-09-06 participant 1896 wrote 7 byte-identical 527 KB rows in
               // 2 seconds this way; 1775, 1860, 1703 and 1735 did the same.
               // It also ignored the return value, marking a FAILED upload as done.
-              await AsyncStorage.setItem(LOG_UPLOADED_KEY, '1');
+              const myClaim = logClaimValue();
+              await AsyncStorage.setItem(LOG_UPLOADED_KEY, myClaim);
               const uploaded = await locationService.saveTrackingLog(pid, eid, logs, sent, remaining);
               if (uploaded === false) {
                 // Release the claim so a later foreground retries.
                 try { await AsyncStorage.removeItem(LOG_UPLOADED_KEY); } catch { /* silent */ }
                 return;
               }
+              // ✅ A Start since the read dropped / replaced the pending key and
+              // cleared logUploaded for ITS session: do not mark it uploaded and
+              // do not touch the new key — just drop this upload's claim.
+              if ((await AsyncStorage.getItem(PENDING_FINISH_KEY)) !== pendingStr) {
+                if ((await AsyncStorage.getItem(LOG_UPLOADED_KEY)) === myClaim) await AsyncStorage.removeItem(LOG_UPLOADED_KEY);
+                return;
+              }
+              await AsyncStorage.setItem(LOG_UPLOADED_KEY, '1');
             }
           }
         }
@@ -2234,6 +2556,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           await AsyncStorage.removeItem(PENDING_FINISH_KEY);
         }
       } catch { /* silent — flag persists, a later foreground retries */ }
+      finally { release(); }
     };
 
     drainPendingFinish();
@@ -2477,6 +2800,51 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                   activeOpacity={0.8}
                 >
                   <Text style={commonStyles.primaryButtonText}>{t('common:ok')}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+            </ModalScroll>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ✅ Login rejected (401) — see handleUnauthorized. While tracking the
+          session keeps running; this only asks for a new login. */}
+      <Modal supportedOrientations={MODAL_ORIENTATIONS}
+        transparent
+        visible={loginPrompt !== null}
+        animationType="fade"
+        statusBarTranslucent
+        onRequestClose={() => setLoginPrompt(null)}
+      >
+        <View style={homeStyles.notifBackdrop}>
+          <View style={[homeStyles.notifWrapper, compactPopups && homeStyles.notifWrapperCompact]}>
+            <ModalScroll style={[homeStyles.notifScroll, compactPopups && homeStyles.notifScrollCompact]} reserve={compactPopups ? 16 : 40}>
+            <View style={[homeStyles.notifCard, compactPopups && homeStyles.notifCardCompact]}>
+              <View style={[homeStyles.notifIconWrapper, compactPopups && homeStyles.hideCompact]}>
+                <Ionicons name="log-in-outline" size={36} color={palette.navy} />
+              </View>
+              <Text style={homeStyles.notifTitle}>{t('home:auth.expiredTitle')}</Text>
+              <Text style={[homeStyles.notifBody, compactPopups && homeStyles.notifBodyCompact]}>
+                {t(loginPrompt === 'tracking' ? 'home:auth.expiredTrackingBody' : 'home:auth.expiredBody')}
+              </Text>
+              <View style={[homeStyles.notifButtonContainer, compactPopups && homeStyles.notifButtonRowCompact]}>
+                <TouchableOpacity
+                  style={[commonStyles.primaryButton, homeStyles.notifViewButton, compactPopups && homeStyles.notifButtonCompact]}
+                  onPress={() => {
+                    setLoginPrompt(null);
+                    navigation.navigate('LoginScreen');
+                  }}
+                  activeOpacity={0.8}
+                >
+                  <Text style={commonStyles.primaryButtonText}>{t('home:auth.logIn')}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[commonStyles.secondaryButton, compactPopups && homeStyles.notifButtonCompact]}
+                  onPress={() => setLoginPrompt(null)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={commonStyles.secondaryButtonText}>{t('home:auth.later')}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -3137,24 +3505,33 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                     args keeps the manual-stop path explicit. */}
                 <TouchableOpacity
                   style={[
-                    isGPSActive ? homeStyles.stopButton : homeStyles.button,
+                    // ✅ "Stopping…" keeps the Stop look (UI check 2026-11-26): the
+                    // teardown sets isGPSActive false at once, so for the whole
+                    // drain / log upload the label sat on the navy START button.
+                    // Dimmed while it runs; a tap then gets the "still stopping"
+                    // toast from confirmStartTracking (trackingLifecycle lock).
+                    isGPSActive || isStopping ? homeStyles.stopButton : homeStyles.button,
                     // Equal space above and below: the button had a bottom
                     // margin only, so it sat flush against the tracking
                     // description above it.
                     { width: '100%', marginTop: spacing.md, marginBottom: spacing.md },
                     // Greyed only when it cannot be pressed: while tracking it is
                     // Stop, which works even if home no longer carries the ids (M1).
-                    !isGPSActive && (!participantId || !eventId) && {
+                    !isStopping && !isGPSActive && (!participantId || !eventId) && {
                       backgroundColor: palette.placeholder,
                       opacity: 0.6,
                     },
+                    isStopping && { opacity: 0.6 },
                   ]}
                   onPress={isGPSActive ? confirmStopTracking : confirmStartTracking}
                   disabled={!isGPSActive && (!participantId || !eventId)}
                   accessibilityRole="button"
+                  accessibilityState={{ busy: isStopping }}
                 >
-                  <Text style={isGPSActive ? homeStyles.stopButtonText : homeStyles.buttonText}>
-                    {isGPSActive
+                  <Text style={isGPSActive || isStopping ? homeStyles.stopButtonText : homeStyles.buttonText}>
+                    {isStopping
+                      ? t('home:tracking.stopping')
+                      : isGPSActive
                       ? t('home:Event.button')
                       : !participantId || !eventId
                         ? t('home:status.waitingForData')

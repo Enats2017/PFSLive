@@ -1,5 +1,6 @@
 {
   "race": {
+    "loadMoreFailed": "Couldn't load more results. Tap to try again.",
     "loading": "Loading results…",
     "noResults": "No results for these filters.",
     "live": "LIVE",

@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { View, ActivityIndicator, Text } from 'react-native';
 import Mapbox from '@rnmapbox/maps';
-import { GPXTrackPoint, GPXAidStation } from '../../services/gpxService';
+import { GPXTrackPoint, GPXAidStation, minMax } from '../../services/gpxService';
 import { getCheckpointName } from '../../utils/checkpointName';
 import { ParticipantMapMarker, AidStationMapMarker, CheckpointData } from '../../types/liveTracking';
 import { liveTrackingStyles } from '../../styles/liveTracking.styles';
@@ -403,19 +403,21 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
 
     const mapCenter = React.useMemo(() => {
         if (trackPoints.length === 0) return [4.4699, 50.5039];
-        const lons = trackPoints.map(pt => pt.lon);
-        const lats = trackPoints.map(pt => pt.lat);
-        return [(Math.max(...lons) + Math.min(...lons)) / 2, (Math.max(...lats) + Math.min(...lats)) / 2];
+        // ✅ minMax, not Math.max(...lons): spreading every point throws
+        // RangeError on a 100k+ point GPX (app audit 2026-11-26).
+        const lon = minMax(trackPoints.map(pt => pt.lon));
+        const lat = minMax(trackPoints.map(pt => pt.lat));
+        return [(lon.max + lon.min) / 2, (lat.max + lat.min) / 2];
     }, [trackPoints]);
 
     const bounds = React.useMemo(() => {
         // Priority 1: GPX track
         if (trackPoints.length > 0) {
-            const lons = trackPoints.map(pt => pt.lon);
-            const lats = trackPoints.map(pt => pt.lat);
+            const lon = minMax(trackPoints.map(pt => pt.lon));
+            const lat = minMax(trackPoints.map(pt => pt.lat));
             return {
-                ne: [Math.max(...lons), Math.max(...lats)] as [number, number],
-                sw: [Math.min(...lons), Math.min(...lats)] as [number, number],
+                ne: [lon.max, lat.max] as [number, number],
+                sw: [lon.min, lat.min] as [number, number],
             };
         }
 

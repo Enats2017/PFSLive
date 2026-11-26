@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { View, Text, Dimensions, TouchableOpacity, ScrollView, Platform, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, Dimensions, TouchableOpacity, ScrollView, Platform, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { Image } from 'expo-image';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { commonStyles, spacing, space } from '../../styles/common.styles'
@@ -22,11 +22,14 @@ import { toastError, toastSuccess } from '../../../utils/toast';
 import { appleVerifyService } from '../../services/appleverifyservice';
 import PurchaseStatusModal from '../../components/PurchaseStatusModal';
 import { resolveProfileCard } from './profileCard';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { TRACKING_PARAMS_KEY_LOCAL, isTrackingParticipant, trackedParticipantFrom, isTrackingRecent } from '../PersonalEventScreen/personalEventGuards';
 
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
 import { palette, fonts } from '../../styles/common.styles';
 import { AppHeader } from '../../components/common/AppHeader';
+import { startReminderService } from '../../services/startReminderService';
 
 
 
@@ -368,6 +371,14 @@ const OwnProfile: React.FC<OwnProfileprops> = ({ route }) => {
     const fromEdit = route.params?.fromEdit;
     const [deleteTarget, setDeleteTarget] = useState<AthleteEvent | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
+    // ✅ One delete at a time (audit 2026-11-26): isDeleting is state, so a
+    // double tap on Confirm sent two deletes (two refetches, two toasts).
+    const deleteGateRef = useRef(false);
+    // ✅ The participant row the live session is tracking, if any (audit
+    // 2026-11-26). Its card loses Edit and Delete: deleting it left the engine
+    // sending fixes that the server dropped as participant_not_found, and an
+    // edit re-dated / re-routed the race under the running session.
+    const [trackedParticipantId, setTrackedParticipantId] = useState<string | null>(null);
     const goBack = useCallback(() => setActiveSection('menu'), [])
     const [avatarLoading, setAvatarLoading] = useState(true);
 
@@ -539,10 +550,38 @@ const OwnProfile: React.FC<OwnProfileprops> = ({ route }) => {
         }
     }, [loadingMoreCustomLive, customPagination.live, targetId]);
 
-    const handleDeleteRequest = useCallback((event: AthleteEvent) => {
-        if (event.can_delete !== 1 || !event.product_custom_app_id) return;
-        setDeleteTarget(event);
+    // Re-read on every focus: tracking starts and stops on Home.
+    useFocusEffect(
+        useCallback(() => {
+            let alive = true;
+            AsyncStorage.getItem(TRACKING_PARAMS_KEY_LOCAL)
+                .then((raw) => { if (alive) setTrackedParticipantId(trackedParticipantFrom(raw)); })
+                .catch(() => { /* unreadable — cards keep their buttons, the tap re-checks */ });
+            return () => { alive = false; };
+        }, [])
+    );
+
+    // ✅ Read at the tap too — the focus read can be a few seconds old.
+    const isTrackedNow = useCallback(async (event: AthleteEvent | null): Promise<boolean> => {
+        if (!event) return false;
+        try {
+            return isTrackingParticipant(await AsyncStorage.getItem(TRACKING_PARAMS_KEY_LOCAL), event.participant_app_id);
+        } catch {
+            return false;
+        }
     }, []);
+
+    const handleDeleteRequest = useCallback(async (event: AthleteEvent) => {
+        if (event.can_delete !== 1 || !event.product_custom_app_id) return;
+        if (await isTrackedNow(event)) {
+            // ✅ Alert, not toastError(text): a toast TITLE is one line, and this
+            // sentence takes 2-5 at 320-393pt (fr / nl, larger text) - it was cut
+            // to "You are tracking this ev…" (layout audit 2026-11-26).
+            Alert.alert(t('ownProfile:deleteEvent.deleteFailed'), t('ownProfile:deleteEvent.trackingNowError'));
+            return;
+        }
+        setDeleteTarget(event);
+    }, [isTrackedNow, t]);
 
 
     const handleCancelDelete = useCallback(() => {
@@ -553,11 +592,22 @@ const OwnProfile: React.FC<OwnProfileprops> = ({ route }) => {
 
     const handleConfirmDelete = useCallback(async () => {
         if (!deleteTarget?.product_custom_app_id) return;
+        if (deleteGateRef.current) return;
+        deleteGateRef.current = true;
         try {
             setIsDeleting(true);
-            const { action } = await eventService.deleteCustomEvent(deleteTarget.product_custom_app_id);
+            if (await isTrackedNow(deleteTarget)) {
+                setDeleteTarget(null);
+                Alert.alert(t('ownProfile:deleteEvent.deleteFailed'), t('ownProfile:deleteEvent.trackingNowError'));   // ✅ see handleDeleteRequest
+                return;
+            }
+            const deleted = await eventService.deleteCustomEvent(deleteTarget.product_custom_app_id);
+            const { action } = deleted;
 
             if (action === 'custom_event_deleted' || action === 'custom_event_not_found') {
+              // ✅ Only THIS event's reminders (re-audit 2026-11-26): cancel()
+              // also dropped the real next race's. Home re-plans on its next answer.
+              void startReminderService.cancelIfFor(deleteTarget.participant_app_id);
                 setDeleteTarget(null);
                 // Same pattern as fromEdit — force a fresh fetch, bypassing the backend cache
                 await fetchProfile(true);
@@ -567,15 +617,23 @@ const OwnProfile: React.FC<OwnProfileprops> = ({ route }) => {
                 // and kept the stale list. Say why, and refetch so the card loses
                 // Delete and Edit as the server now reports it.
                 setDeleteTarget(null);
-                toastError(t('ownProfile:deleteEvent.trackingStartedError'));
+                // ✅ Tracked a few minutes ago (re-audit 2026-11-26): the server
+                // adds reason 'tracking_recent' — temporary, so say "try again
+                // in a few minutes", not the permanent "can no longer be deleted".
+                // Alert, not a toast: these sentences are too long for the toast
+                // title in fr / nl at 320 pt with large text (ui_orientation group2).
+                Alert.alert(t('ownProfile:deleteEvent.deleteFailed'), isTrackingRecent(deleted as { reason?: unknown })
+                    ? t('ownProfile:deleteEvent.trackingRecentError')
+                    : t('ownProfile:deleteEvent.trackingStartedError'));
                 await fetchProfile(true);
             }
         } catch (err) {
             handleApiError(err);
         } finally {
             setIsDeleting(false);
+            deleteGateRef.current = false;
         }
-    }, [deleteTarget, handleApiError, t]);
+    }, [deleteTarget, handleApiError, t, isTrackedNow]);
 
     const renderContent = (): React.ReactNode => {
         if (activeSection === 'menu') return <MenuContent onSelect={setActiveSection}  onNavigate={(screen, params) => navigation.navigate(screen as any, params as any)} profile={profile} onRefresh={handleRefresh} refreshLoading={refreshLoading} />;
@@ -600,6 +658,7 @@ const OwnProfile: React.FC<OwnProfileprops> = ({ route }) => {
             loadingMoreLive={loadingMoreCustomLive}
             pagination={customPagination}
             onDeleteEvent={handleDeleteRequest}
+            trackedParticipantId={trackedParticipantId}
         />;
 
         return null;

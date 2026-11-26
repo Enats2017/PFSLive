@@ -36,6 +36,11 @@ const useSearchSuggestions = (
   const [loading, setLoading] = useState(false);
   const [dropdownVisible, setDropdownVisible] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // ✅ Only the newest search may set the list (app audit 2026-11-26): type
+  // "jan", pause, type "janssens" — when the "jan" answer arrived last it
+  // replaced the "janssens" suggestions, and its `finally` hid the spinner
+  // of the search still running. Bumped by every keystroke and by clear.
+  const searchId = useRef(0);
 
   // Both call sites pass array literals, which are a fresh reference on every
   // render — as a useCallback dep they would rebuild handleSearch each time.
@@ -44,6 +49,10 @@ const useSearchSuggestions = (
   const tabSig = tabFilters.join(",");
 
   const clearSuggestions = useCallback(() => {
+    // A debounced search still pending must not re-fill a cleared box.
+    searchId.current++;
+    if (timer.current) clearTimeout(timer.current);
+    setLoading(false);
     setSuggestions([]);
     setDropdownVisible(false);
     setQuery("");
@@ -53,10 +62,12 @@ const useSearchSuggestions = (
     (text: string) => {
       setQuery(text);
       if (timer.current) clearTimeout(timer.current);
+      const id = ++searchId.current;
 
       if (!text.trim()) {
         setSuggestions([]);
         setDropdownVisible(false);
+        setLoading(false);
         return;
       }
 
@@ -71,6 +82,7 @@ const useSearchSuggestions = (
           const responses = await Promise.all(
             keys.map((key) => suggestionService.getSuggestions({ [key]: text.trim() })),
           );
+          if (id !== searchId.current) return;   // a newer search owns the list
           const results = responses.flat();
           const filtered =
             tabs.length > 0
@@ -91,9 +103,9 @@ const useSearchSuggestions = (
           // previous render's state), so it always logged the old count.
           console.log("🔍 Final suggestions set:", filtered.length);
         } catch {
-          setSuggestions([]);
+          if (id === searchId.current) setSuggestions([]);
         } finally {
-          setLoading(false);
+          if (id === searchId.current) setLoading(false);
         }
       }, DEBOUNCE_MS);
     },

@@ -1,5 +1,5 @@
-import { API_CONFIG, getApiEndpoint } from '../constants/config';
-import { apiClient } from './api';
+import { API_CONFIG, getApiEndpoint, getDeviceId } from '../constants/config';
+import { apiClient, AppError } from './api';
 import { getCurrentLanguageId } from '../i18n';
 
 // ── interfaces ─────────────────────────────────────────────
@@ -142,7 +142,12 @@ export const resultDetail = {
         params: ResultDetailParams,
     ): Promise<ResultDetailResponse> => {
         try {
-            const headers = await API_CONFIG.getHeaders();
+            // ✅ X-Device-Id: the rate limit is per PHONE when the server knows
+            // it (ApiSecurity rate_scope_field), not per venue IP — 60 fans on
+            // one race Wi-Fi each opening a runner used to lock the whole IP
+            // out (app audit 2026-11-26). A header, not a body field, so the
+            // server's response cache (keyed on the body) stays shared.
+            const headers = { ...(await API_CONFIG.getHeaders()), 'X-Device-Id': await getDeviceId() };
             const language_id = getCurrentLanguageId();
 
             if (API_CONFIG.DEBUG) {
@@ -188,6 +193,11 @@ export const resultDetail = {
             if (API_CONFIG.DEBUG) {
                 console.error('❌ Result detail error:', error);
             }
+            // ✅ Keep the AppError (app audit 2026-11-26): re-wrapping it in a
+            // plain Error lost its type, so "bib not in RaceResult", an expired
+            // session and "no connection" all read "Something went wrong — Try
+            // again", with a retry that could never succeed for the first two.
+            if (error instanceof AppError) throw error;
             throw new Error(
                 error?.response?.data?.error ?? 
                 error?.message ?? 

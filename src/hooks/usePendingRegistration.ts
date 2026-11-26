@@ -2,10 +2,18 @@ import { useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NavigationProp } from '@react-navigation/native';
 import { API_CONFIG } from '../constants/config';
+import { isPendingRegistrationFresh } from '../screens/EventDetails/registrationFlow';
+import { shouldNoticeExpiredConnect } from '../services/authFlowGuards';
+import { toastInfo } from '../../utils/toast';
+import i18n from '../i18n';
 
 const PENDING_PRODUCT_KEY = 'pending_product_app_id';
 const PENDING_OPTION_KEY = 'pending_option_value_app_id';
 const PENDING_EVENT_NAME_KEY = 'pending_event_name';
+// ✅ When it was saved (audit 2026-11-26, H2): replayed only while fresh, see
+// isPendingRegistrationFresh. Without it a Connect abandoned at the login
+// screen registered the runner on their next login, weeks later.
+const PENDING_SAVED_AT_KEY = 'pending_saved_at';
 
 // ✅ SAFE GET - RETURNS NULL IF NOT EXISTS
 const safeGetItem = async (key: string): Promise<string | null> => {
@@ -56,6 +64,7 @@ export const savePendingRegistration = async (
       safeSetItem(PENDING_PRODUCT_KEY, String(product_app_id)),
       safeSetItem(PENDING_OPTION_KEY, String(product_option_value_app_id)),
       safeSetItem(PENDING_EVENT_NAME_KEY, event_name),
+      safeSetItem(PENDING_SAVED_AT_KEY, String(Date.now())),
     ]);
 
     const allSuccess = results.every((result) => result === true);
@@ -87,6 +96,7 @@ export const clearPendingRegistration = async (): Promise<void> => {
       safeRemoveItem(PENDING_PRODUCT_KEY),
       safeRemoveItem(PENDING_OPTION_KEY),
       safeRemoveItem(PENDING_EVENT_NAME_KEY),
+      safeRemoveItem(PENDING_SAVED_AT_KEY),
     ]);
 
     if (API_CONFIG.DEBUG) {
@@ -121,10 +131,11 @@ export const hasPendingRegistration = async (): Promise<boolean> => {
 export const usePendingRegistration = (navigation: NavigationProp<any>) => {
   const handleAfterAuth = useCallback(async () => {
     try {
-      const [productId, optionId, eventName] = await Promise.all([
+      const [productId, optionId, eventName, savedAt] = await Promise.all([
         safeGetItem(PENDING_PRODUCT_KEY),
         safeGetItem(PENDING_OPTION_KEY),
         safeGetItem(PENDING_EVENT_NAME_KEY),
+        safeGetItem(PENDING_SAVED_AT_KEY),
       ]);
 
       if (API_CONFIG.DEBUG) {
@@ -135,17 +146,46 @@ export const usePendingRegistration = (navigation: NavigationProp<any>) => {
         });
       }
 
-      if (productId && optionId) {
-        // Clear pending data (always succeeds)
-        await clearPendingRegistration();
+      // ✅ Stale (or saved by an app version without the time): dropped, never
+      // replayed - replaying registers and can spend a session (audit H2).
+      const fresh = isPendingRegistrationFresh(savedAt, Date.now());
 
-        // Navigate to EventDetails with auto-register
-        navigation.navigate('EventDetails', {
-          product_app_id: Number(productId),
-          event_name: eventName || 'Event', // Fallback if event_name missing
-          auto_register_id: Number(optionId),
+      if (productId && optionId && fresh) {
+        // ✅ NOT cleared here any more (audit L4): DistanceTab clears it when it
+        // consumes auto_register_id. Cleared here, a failed event load or an
+        // app kill before the list arrived lost the runner's Connect silently.
+        // The TTL above and logout clearing it bound how long it can live.
+
+        // Navigate to EventDetails with auto-register.
+        // ✅ reset, not navigate (audit L3): the stack was [LoginScreen(, Register,
+        // OTP)] here, so Back from the event showed the login (or the used OTP)
+        // screen to a runner who is now logged in. Home underneath instead.
+        navigation.reset({
+          index: 1,
+          routes: [
+            { name: 'HomeScreen' },
+            {
+              name: 'EventDetails',
+              params: {
+                product_app_id: Number(productId),
+                event_name: eventName || 'Event', // Fallback if event_name missing
+                auto_register_id: Number(optionId),
+              },
+            },
+          ],
         });
       } else {
+        if (productId || optionId) {
+          await clearPendingRegistration(); // stale - see above
+        }
+        // ✅ Say so (re-audit AN3): the runner tapped Connect, logged in, and
+        // landed on Home with no word of it - they believed they were connected.
+        if (shouldNoticeExpiredConnect(productId, optionId, fresh)) {
+          toastInfo(
+            i18n.t('login:pendingConnectExpiredTitle'),
+            i18n.t('login:pendingConnectExpired'),
+          );
+        }
         // No pending registration, go to Home
         if (API_CONFIG.DEBUG) {
           console.log('📍 No pending registration, going to Home');

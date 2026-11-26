@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Profile } from '../services/profileServices'
 import {
@@ -10,6 +10,12 @@ import {
 import { getCurrentLanguageId } from '../i18n'
 import { Country } from '../components/CountrySelector'
 import { ageFromDob, needsParentConsent } from '../services/validation/authValidation'
+import {
+    classifyEditProfileFailure,
+    EditProfileFailure,
+    tryBeginSubmit,
+    endSubmit,
+} from '../services/authFlowGuards'
 
 export interface EditProfileForm {
     firstname: string
@@ -91,10 +97,19 @@ export const useEditProfile = (initialProfile: Profile | null) => {
 
     const [removePicture, setRemovePicture] = useState(false)
 
+    // ✅ One save at a time (audit 2026-11-26, finding 9). With an email change
+    // each save mints a new email_change_token + code, so a same-frame double tap
+    // could route to the OTP screen with the token whose code was overwritten.
+    const submittingRef = useRef(false)
+
+    // ✅ The form as loaded from the server - what an unsaved draft is measured
+    // against (re-audit A11, see EditProfileScreen).
+    const [baseline, setBaseline] = useState<EditProfileForm | null>(null)
+
     useEffect(() => {
         if (!initialProfile) return
 
-        setForm({
+        const loaded: EditProfileForm = {
             firstname: initialProfile.firstname ?? '',
             lastname: initialProfile.lastname ?? '',
             email: initialProfile.email ?? '',
@@ -116,8 +131,15 @@ export const useEditProfile = (initialProfile: Profile | null) => {
             // tick when the date is actually changed into the 13-to-17 band, so a
             // member already in it is not blocked from editing anything else.
             parentConsent: toBool(initialProfile.parent_consent),
-        })
+        }
+        setForm(loaded)
+        setBaseline(loaded)
     }, [initialProfile])
+
+    // ✅ Put a restored draft back over the loaded profile (never passwords).
+    const applyDraft = useCallback((values: Partial<EditProfileForm>) => {
+        setForm(prev => ({ ...prev, ...values, password: prev.password, confirmPassword: prev.confirmPassword }))
+    }, [])
 
     const setField = useCallback(
         <K extends keyof EditProfileForm>(key: K, value: EditProfileForm[K]) => {
@@ -217,10 +239,16 @@ export const useEditProfile = (initialProfile: Profile | null) => {
         isEmailChange: boolean
         emailChangeToken: string | null
         pendingEmail: string | null
+        // ✅ Why it failed, so the screen can SAY so. Every failure that was not a
+        // mapped field error used to end silently (finding 5). Undefined when ok,
+        // when a second tap was refused, or when the inline errors already explain it.
+        failure?: EditProfileFailure
     }> => {
         const effective: EditProfileForm = { ...form, ...overrides }
 
         if (!validate(effective)) return { ok: false, isEmailChange: false, emailChangeToken: null, pendingEmail: null }
+
+        if (!tryBeginSubmit(submittingRef)) return { ok: false, isEmailChange: false, emailChangeToken: null, pendingEmail: null }
 
         setLoading(true)
         setSuccess(false)
@@ -273,19 +301,34 @@ export const useEditProfile = (initialProfile: Profile | null) => {
 
             return { ok: true, isEmailChange, emailChangeToken, pendingEmail }
         } catch (err) {
+            let mappedFieldError = false
             if (err instanceof ValidationError) {
                 const newErrors: FormErrors = {}
                 err.fields.forEach((fieldError) => {
                     const key = fieldErrorMap[fieldError]
                     if (key) {
                         newErrors[key] = t(`profile:validation.${fieldError}`)
+                        mappedFieldError = true
                     }
                 })
                 setErrors(newErrors)
             }
-            return { ok: false, isEmailChange: false, emailChangeToken: null, pendingEmail: null }
+            // A rejected photo arrives in `fields` but has no field to land on, and
+            // the server then saves NOTHING else either - it must be said.
+            const failure = classifyEditProfileFailure({
+                fields: err instanceof ValidationError ? err.fields : undefined,
+                code: (err as any)?.code,
+                type: (err as any)?.type,
+                message: (err as any)?.message,
+            })
+            const silentlyExplained = mappedFieldError && failure !== 'picture'
+            return {
+                ok: false, isEmailChange: false, emailChangeToken: null, pendingEmail: null,
+                failure: silentlyExplained ? undefined : failure,
+            }
         } finally {
             setLoading(false)
+            endSubmit(submittingRef)
         }
     }, [form, picture, removePicture, t])
 
@@ -312,6 +355,8 @@ export const useEditProfile = (initialProfile: Profile | null) => {
         removePicture,
         setRemovePicture,
         submit,
+        baseline,
+        applyDraft,
         emailChangeToken,   // NEW
         pendingEmail, 
     }

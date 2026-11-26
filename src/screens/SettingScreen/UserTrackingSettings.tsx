@@ -21,6 +21,8 @@ import { ANALYTICS_SCREENS, ANALYTICS_BUTTONS, ANALYTICS_PARAMS } from '../../co
 import { MODAL_ORIENTATIONS } from '../../constants/modalOrientations';
 import { useLandscapeSidePadding, useModalSideInsets } from '../../hooks/useLandscapeSidePadding';
 import { fieldScrollY } from '../../utils/screenFit';
+import { languageUpdateSettings, afterSheetDismissed, SavedVisibility } from './visibilitySettings';
+import ErrorScreen from '../../components/ErrorScreen';
 
 type Visibility = 'public' | 'private';
 
@@ -116,7 +118,19 @@ export const UserTrackingSettings: React.FC = () => {
         return () => { showSub.remove(); hideSub.remove(); };
     }, [keyboardOffset]);
 
+    // ✅ What the server last confirmed (audit 2026-11-26) — the tabs alone
+    // were taken for it. See visibilitySettings.ts.
+    // null until the server answered (re-audit 2026-11-26): the default
+    // "public" must never be taken for the account's setting.
+    const savedRef = useRef<SavedVisibility | null>(null);
+    // The load failed: show an error with Retry, not a form that looks public.
+    const [loadFailed, setLoadFailed] = useState(false);
+
     const syncState = (settings: Settings) => {
+        savedRef.current = {
+            visibility: settings.live_tracking_visibility,
+            password: settings.live_tracking_visibility === 'private' ? (settings.live_tracking_password ?? '') : '',
+        };
         setVisibility(settings.live_tracking_visibility);
         setPassword(
             settings.live_tracking_visibility === 'private'
@@ -133,6 +147,7 @@ export const UserTrackingSettings: React.FC = () => {
     const loadSettings = async () => {
         try {
             setIsLoading(true);
+            setLoadFailed(false);
             const { settings, accountDeletionUrl, languageId } = await settingsService.getSettings();
             syncState(settings);
             setDeletionUrl(accountDeletionUrl);
@@ -145,6 +160,9 @@ export const UserTrackingSettings: React.FC = () => {
         } catch (e: any) {
             console.error('❌ [Settings] Load error:', e?.message);
             toastError(t('setting:liveTrackingSettings.toastErrorLoad'));
+            // ✅ Only when nothing was ever loaded — a later failed reload keeps
+            // the confirmed state on screen.
+            if (savedRef.current === null) setLoadFailed(true);
         } finally {
             setIsLoading(false);
         }
@@ -192,11 +210,11 @@ export const UserTrackingSettings: React.FC = () => {
 
         try {
             setIsLanguageUpdating(true);   // ← changed from setIsUpdating
+            // ✅ The SAVED visibility, not the tabs (audit 2026-11-26): an unsaved
+            // Private tab went to the server with an empty password, an unsaved
+            // Public tab made a private account public.
             const { settings, languageId } = await settingsService.updateSettings(
-                {
-                    live_tracking_visibility: visibility,
-                    live_tracking_password: visibility === 'private' ? password.trim() : '',
-                },
+                languageUpdateSettings(savedRef.current),
                 option.value
             );
             syncState(settings);
@@ -234,10 +252,25 @@ export const UserTrackingSettings: React.FC = () => {
         Animated.spring(slideAnim, { toValue: 0, useNativeDriver: true, tension: 65, friction: 11 }).start();
     };
 
-    const closeModal = () => {
+    const closeModal = (afterClosed?: () => void) => {
         Keyboard.dismiss();
         Animated.timing(slideAnim, { toValue: 500, duration: 280, useNativeDriver: true })
-            .start(() => setModalVisible(false));
+            .start(() => { setModalVisible(false); afterClosed?.(); });
+    };
+
+    // ✅ Closing the sheet WITHOUT saving (✕, backdrop, back) puts the tabs and
+    // the password back to what the server has (audit 2026-11-26): the screen
+    // kept showing "Private" while followers still saw the runner publicly.
+    const dismissModal = () => {
+        const back = afterSheetDismissed(savedRef.current);
+        setVisibility(back.visibility);
+        // ✅ The sheet's own fields only once it is off screen (layout audit
+        // 2026-11-26): reset during the 280ms slide, the strength hint / error
+        // line vanished and the bottom-anchored sheet jumped while it moved.
+        closeModal(() => {
+            setPassword(back.password);
+            setPasswordError('');
+        });
     };
 
     const getStrengthLabel = (len: number): string => {
@@ -256,6 +289,13 @@ export const UserTrackingSettings: React.FC = () => {
             toastError(t('setting:liveTrackingSettings.deleteAccountError'));
         }
     };
+
+    // ✅ Settings never loaded (re-audit 2026-11-26): the form would show the
+    // default Public for an account that may be private, and any change made
+    // there could switch it. Error + Retry instead.
+    if (!isLoading && loadFailed) {
+        return <ErrorScreen type="network" onRetry={loadSettings} />;
+    }
 
     if (isLoading) {
         return (
@@ -337,9 +377,9 @@ export const UserTrackingSettings: React.FC = () => {
                 )}
             </ScrollView>
 
-            <Modal supportedOrientations={MODAL_ORIENTATIONS} transparent visible={modalVisible} animationType="none" onRequestClose={closeModal}>
+            <Modal supportedOrientations={MODAL_ORIENTATIONS} transparent visible={modalVisible} animationType="none" onRequestClose={dismissModal}>
                 <View style={styles.modalOverlay}>
-                    <TouchableOpacity style={styles.modalBackdrop} onPress={closeModal} activeOpacity={1} />
+                    <TouchableOpacity style={styles.modalBackdrop} onPress={dismissModal} activeOpacity={1} />
                     <Animated.View style={[
                         styles.bottomSheet,
                         {
@@ -351,7 +391,7 @@ export const UserTrackingSettings: React.FC = () => {
                         { transform: [{ translateY: Animated.subtract(slideAnim, keyboardOffset) }] },
                     ]}>
                         <View style={styles.sheetHandle} />
-                        <TouchableOpacity style={[styles.closeBtn, { right: 14 + sheetSide.paddingRight }]} onPress={closeModal} hitSlop={{ top: 12, right: 12, bottom: 12, left: 12 }}>
+                        <TouchableOpacity style={[styles.closeBtn, { right: 14 + sheetSide.paddingRight }]} onPress={dismissModal} hitSlop={{ top: 12, right: 12, bottom: 12, left: 12 }}>
                             <Text style={styles.closeBtnText}>✕</Text>
                         </TouchableOpacity>
 

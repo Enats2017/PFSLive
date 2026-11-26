@@ -8,6 +8,7 @@ import {
   StatusBar,
   Linking,
   useWindowDimensions,
+  AppState,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useFocusEffect } from '@react-navigation/native';
@@ -41,6 +42,7 @@ import useGpxDownload, { canShowGpxButton } from '../../hooks/useGpxDownload';
 import { canShowConnectButton } from './distanceConnect';
 import { analyticsService } from '../../services/analyticsService';
 import { ANALYTICS_SCREENS, ANALYTICS_BUTTONS, ANALYTICS_PARAMS } from '../../constants/analyticsScreens';
+import { clearPendingRegistration } from '../../hooks/usePendingRegistration';
 
 
 interface DistanceTabProps {
@@ -50,6 +52,12 @@ interface DistanceTabProps {
   auto_register_id?: number | null;
   /** Highlight + scroll to this distance; never registers. See navigation types. */
   preselect_pov_id?: number | null;
+  /**
+   * ✅ Set (to a new value) by a link that must show fresh data, e.g.
+   * livio://registration-confirmed (app re-audit 2026-11-26, RN2). Each new
+   * value refetches past the 30 s per-customer event cache.
+   */
+  refresh_nonce?: number | null;
   onRefresh?: () => void;
   onResultsAvailability?: (show: boolean) => void;
   onRaceDateAvailable?: (date: string | null) => void; 
@@ -61,6 +69,7 @@ const DistanceTab = ({
   event_image,
   auto_register_id,
   preselect_pov_id,
+  refresh_nonce,
   onRefresh,
   onResultsAvailability,
   onRaceDateAvailable,
@@ -96,10 +105,15 @@ const DistanceTab = ({
   const { error, hasError, handleApiError, clearError } = useScreenError();
 
   const fetchDistances = useCallback(
-    async (bustCache: boolean = false) => {
+    // ✅ `silent` (audit 2026-11-26, M3): a refresh that keeps the list on
+    // screen - no spinner (which unmounts the open popups) and no error screen
+    // over a list that is still valid. Used on return to the foreground.
+    async (bustCache: boolean = false, silent: boolean = false) => {
       try {
-        setLoading(true);
-        clearError();
+        if (!silent) {
+          setLoading(true);
+          clearError();
+        }
 
         if (API_CONFIG.DEBUG) {
           console.log('📡 Fetching distances for product:', product_app_id, { bustCache });
@@ -134,9 +148,9 @@ const DistanceTab = ({
         if (API_CONFIG.DEBUG) {
           console.error('❌ Error fetching distances:', err);
         }
-        handleApiError(err);
+        if (!silent) handleApiError(err);
       } finally {
-        setLoading(false);
+        if (!silent) setLoading(false);
       }
     },
     [product_app_id, t]
@@ -206,13 +220,15 @@ const DistanceTab = ({
 
       setPendingRefresh(true);
 
+      // ✅ Refetch only - no onRefresh() (audit L6). onRefresh bumps the parent's
+      // key and REMOUNTS this tab: a Connect started on another distance in
+      // these 500 ms lost its popup, confirm sheet and celebration.
       setTimeout(() => {
         fetchDistances(true);
-        onRefresh?.();
         setPendingRefresh(false);
       }, 500);
     },
-    [updateDistanceStatus, t, fetchDistances, onRefresh]
+    [updateDistanceStatus, t, fetchDistances]
   );
 
   // ✅ HANDLE SUCCESS MODAL CLOSE
@@ -239,13 +255,13 @@ const DistanceTab = ({
         console.log('🔄 Refreshing after modal close');
       }
 
+      // ✅ Refetch only, no remount via onRefresh (audit L6, see handleDeleteSuccess).
       setTimeout(() => {
         fetchDistances(true);
-        onRefresh?.();
         setPendingRefresh(false);
       }, 300);
     }
-  }, [pendingRefresh, fetchDistances, onRefresh, product_app_id, event_name]);
+  }, [pendingRefresh, fetchDistances, product_app_id, event_name]);
 
   const {
     modalVisible,
@@ -278,9 +294,39 @@ const DistanceTab = ({
     handleDeleteSuccess
   );
 
+  // ✅ Coming BACK to this screen refetches past the cache (app re-audit
+  // 2026-11-26, RN2). The first focus may use the 30 s per-customer cache; a
+  // later one follows something that may have changed the registration
+  // (ParticipantResult, a confirmation link opened while another screen was
+  // on top) and showed the cached Connect button.
+  const focusedBeforeRef = useRef(false);
   useFocusEffect(
     useCallback(() => {
-      fetchDistances(false);
+      fetchDistances(focusedBeforeRef.current || !!refresh_nonce);
+      focusedBeforeRef.current = true;
+    }, [fetchDistances])
+  );
+
+  // ✅ A new refresh_nonce while mounted (the link landed on this screen): refetch.
+  const lastNonceRef = useRef(refresh_nonce ?? null);
+  useEffect(() => {
+    if (!refresh_nonce || refresh_nonce === lastNonceRef.current) return;
+    lastNonceRef.current = refresh_nonce;
+    void fetchDistances(true, true);
+  }, [refresh_nonce, fetchDistances]);
+
+  // ✅ Back in the foreground while this screen is showing: refetch past the
+  // cache (audit 2026-11-26, M3). The e-mailed confirmation link registers in
+  // the BROWSER and returns via livio://registration-confirmed to this same,
+  // still-focused screen - focus does not change, so the card kept its Connect
+  // button, and a tap on it answered "You're already registered!". Silent, so
+  // a popup that is open stays open.
+  useFocusEffect(
+    useCallback(() => {
+      const sub = AppState.addEventListener('change', (state) => {
+        if (state === 'active') void fetchDistances(true, true);
+      });
+      return () => sub.remove();
     }, [fetchDistances])
   );
 
@@ -332,10 +378,15 @@ const DistanceTab = ({
       (d) => d.product_option_value_app_id === auto_register_id
     );
 
+    // ✅ The pending Connect is consumed HERE, once the list is in (audit L4) -
+    // handleAfterAuth no longer clears it before this screen could use it.
+    void clearPendingRegistration();
+
     if (!distanceItem) {
       if (API_CONFIG.DEBUG) {
         console.log('⚠️ Auto-register distance not found');
       }
+      navigation.setParams({ auto_register_id: null });
       return;
     }
 
@@ -344,8 +395,14 @@ const DistanceTab = ({
     }
 
     navigation.setParams({ auto_register_id: null });
-    handleRegister(distanceItem);
-  }, [auto_register_id, distances, loading, handleRegister, navigation]);
+    // ✅ Through handleConnectClick, not handleRegister (audit H2): a Connect
+    // tapped while logged out never showed the connect_confirm popup (a guest
+    // payload has no registration_status), and after the login this went
+    // straight to the API - on an event without Race Result that registered
+    // and spent a session with no "this uses a session" question. An
+    // 'available' distance now asks first, exactly like a tap.
+    handleConnectClick(distanceItem);
+  }, [auto_register_id, distances, loading, handleConnectClick, navigation]);
 
   // ✅ GPX CLICK HANDLER — check registration first
     const handleGpxClick = useCallback(
@@ -596,7 +653,12 @@ const handleExternalRegister = useCallback((url: string) => {
           <View style={buttonsBelow ? detailsStyles.distanceButtonsBelow : { gap: spacing.sm }}>
             {canShowConnectButton(item) && (
             <TouchableOpacity
-                style={[detailsStyles.resultsButton, buttonsBelow && detailsStyles.distanceButtonFull]}
+                style={[
+                  detailsStyles.resultsButton,
+                  buttonsBelow && detailsStyles.distanceButtonFull,
+                  // ✅ Visibly busy while ANOTHER card's call runs (RN4, below).
+                  registerLoading && !isRegistering && !isRegisterMode && { opacity: 0.5 },
+                ]}
                 onPress={() => {
                   if (isRegisterMode) {
                     handleExternalRegister(eventRegisterUrl);
@@ -606,7 +668,11 @@ const handleExternalRegister = useCallback((url: string) => {
                     ? handleUndoClick(item)
                     : handleConnectClick(item);
                 }}
-                disabled={isRegistering}
+                // ✅ Every Connect / Undo is off while ANY register / unregister call
+                // runs (app re-audit 2026-11-26, RN4): the hook takes one call at a
+                // time (inFlightRef), so a tap on another card used to be dropped
+                // with no sign. The website register link is not a call - it stays on.
+                disabled={isRegistering || (registerLoading && !isRegisterMode)}
                 activeOpacity={0.8}
               >
               {isRegistering ? (

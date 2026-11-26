@@ -1,5 +1,6 @@
 import { API_CONFIG, getApiEndpoint } from '../constants/config';
 import { apiClient } from './api';
+import { UPLOAD_TIMEOUT_MS } from '../screens/PersonalEventScreen/personalEventGuards';
 
 export interface PersonalEventFile {
   uri: string;
@@ -169,7 +170,10 @@ export const createPersonalEvent = async (
     const response = await apiClient.postRaw<PersonalEventResponse>(
       getApiEndpoint(API_CONFIG.ENDPOINTS.Personal_Event),
       formData,
-      { headers, timeout: API_CONFIG.TIMEOUT }
+      // ✅ Upload timeout, not the shared 15 s (audit 2026-11-26): a GPX upload
+      // that outlived 15 s was still created server-side while the app said
+      // "failed" — the retry made a second event. See UPLOAD_TIMEOUT_MS.
+      { headers, timeout: UPLOAD_TIMEOUT_MS }
     );
 
      console.log(

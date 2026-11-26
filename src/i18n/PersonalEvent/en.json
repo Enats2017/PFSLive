@@ -48,7 +48,9 @@
     "trackingStarted": "This event can no longer be edited because tracking has already started.",
     "invalidEventId": "Invalid event. Please go back and try again.",
     "categoryInvalid": "Please select a valid category",
-    "categoryRequired": "Please select a category type"
+    "categoryRequired": "Please select a category type",
+    "timezoneInvalid": "Your phone's time zone could not be used. Please check the date and time settings of your phone, or contact us.",
+    "trackingRecent": "You tracked this event a few minutes ago. Try again in a few minutes."
   },
   "file": {
     "uploadTitle": "Tap to upload GPX file",
@@ -72,5 +74,9 @@
     "walking": "Walking",
     "running": "Running",
     "cycling": "Cycling"
+  },
+  "draft": {
+    "restoredTitle": "Unsaved changes restored",
+    "restoredMessage": "We kept the changes you had not saved yet. Check them and tap Submit event."
   }
 }

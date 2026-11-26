@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -14,6 +14,7 @@ import { forgotStyles } from '../../../styles/forgetPassword.styles';
 import { commonStyles, palette } from '../../../styles/common.styles';
 import { analyticsService } from '../../../services/analyticsService';
 import { Button } from '../../../components/ui';
+import { tryBeginSubmit, endSubmit } from '../../../services/authFlowGuards';
 
 interface NewPasswordStepProps {
   passwordResetToken: string;
@@ -32,6 +33,9 @@ const NewPasswordStep: React.FC<NewPasswordStepProps> = ({
   const [confirmPassword, setConfirmPassword] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
+  // ✅ One reset at a time (audit 2026-11-26, finding 9): the reset token is
+  // single-use, so a same-frame second submit always failed with 'session expired'.
+  const submittingRef = useRef(false);
 
   const validate = useCallback((): boolean => {
     const newErrors: Record<string, string> = {};
@@ -58,6 +62,7 @@ const NewPasswordStep: React.FC<NewPasswordStepProps> = ({
 
   const handleSubmit = useCallback(async () => {
     if (!validate()) return;
+    if (!tryBeginSubmit(submittingRef)) return;
     
     setLoading(true);
     setErrors({});
@@ -113,6 +118,7 @@ const NewPasswordStep: React.FC<NewPasswordStepProps> = ({
       }
     } finally {
       setLoading(false);
+      endSubmit(submittingRef);
     }
   }, [validate, passwordResetToken, password, confirmPassword, onSuccess, t]);
 

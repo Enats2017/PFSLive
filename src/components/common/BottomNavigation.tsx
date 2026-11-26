@@ -1,7 +1,8 @@
 import React from 'react';
 import { View, TouchableOpacity, Text, useWindowDimensions } from 'react-native';
 import { Image } from 'expo-image';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute, StackActions, CommonActions } from '@react-navigation/native';
+import { tabPlan, TabPlan } from '../../utils/tabNavigation';
 import { useTranslation } from 'react-i18next';
 import { palette } from '../../styles/common.styles';
 import { bottomNavStyles } from '../../styles/bottomNav.styles';
@@ -67,6 +68,21 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
   race_date
 }) => {
   const navigation = useNavigation<any>();
+  // ✅ Back to the screen already open for this race, instead of pushing
+  // another copy (app audit 2026-11-26). React Navigation 7's navigate() only
+  // reuses the route on top, so each Results ↔ Map tap stacked a new screen,
+  // and every stacked map kept polling. See utils/tabNavigation.
+  const goTo = (name: string, params?: Record<string, any>) => {
+    const state = navigation.getState?.();
+    const plan = state ? tabPlan(state.routes, state.index, name, params) : { pops: 0 } as TabPlan;
+    if (plan.pops > 0) {
+      // The open map gets the distance picked meanwhile (see tabPlan).
+      if (plan.setParamsKey) {
+        navigation.dispatch({ ...CommonActions.setParams(plan.setParams ?? {}), source: plan.setParamsKey, target: state.key });
+      }
+      navigation.dispatch(StackActions.pop(plan.pops));
+    } else navigation.navigate(name, params);
+  };
   const route = useRoute();
   const { t } = useTranslation('common');
   // ✅ Landscape (audit 2026-10-23): the 79pt bar (icon over label) was ~40%
@@ -112,7 +128,7 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
 
       case 'Results':
         if (product_app_id) {
-          navigation.navigate('ResultList', {
+          goTo('ResultList', {
             product_app_id,
             product_option_value_app_id: product_option_value_app_id || 0,
             event_name: event_name || '',
@@ -126,7 +142,7 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
 
       case 'Map':
         if (product_app_id) {
-          navigation.navigate('LiveTracking', {
+          goTo('LiveTracking', {
             product_app_id,
             product_option_value_app_id: product_option_value_app_id || 0,
             event_name: event_name || '',
@@ -141,7 +157,7 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
 
       case 'Favorites':
         if (product_app_id) {
-          navigation.navigate('FavouriteList', {
+          goTo('FavouriteList', {
             product_app_id,
             event_name: event_name || '',
             event_image: event_image || '',
@@ -160,39 +176,39 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
 
     if (currentRoute === 'ResultList') {
       if (sourceScreen === 'EventDetails') {
-        navigation.navigate('EventDetails', {
+        goTo('EventDetails', {
           product_app_id,
           event_name: event_name || '',
           event_image: event_image || '',
           auto_register_id: null,
         });
       } else if (sourceScreen === 'RaceResultScreen') {
-        navigation.navigate('RaceResultScreen', {
+        goTo('RaceResultScreen', {
           product_app_id,
           event_name: event_name || '',
           event_image: event_image || '',
         });
       } else {
         if (product_app_id) {
-          navigation.navigate('EventDetails', {
+          goTo('EventDetails', {
             product_app_id,
             event_name: event_name || '',
             event_image: event_image || '',
             auto_register_id: null,
           });
         } else {
-          navigation.navigate('HomeScreen');
+          goTo('HomeScreen');
         }
       }
     } else if (currentRoute === 'FavouriteList') {
       if (sourceScreen === 'RaceResultScreen') {
-        navigation.navigate('RaceResultScreen', {
+        goTo('RaceResultScreen', {
           product_app_id,
           event_name: event_name || '',
           event_image: event_image || '',
         });
       } else {
-        navigation.navigate('EventDetails', {
+        goTo('EventDetails', {
           product_app_id,
           event_name: event_name || '',
           event_image: event_image || '',
@@ -203,14 +219,14 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
       // Already on the right screen — do nothing
     } else {
       if (product_app_id) {
-        navigation.navigate('EventDetails', {
+        goTo('EventDetails', {
           product_app_id,
           event_name: event_name || '',
           event_image: event_image || '',
           auto_register_id: null,
         });
       } else {
-        navigation.navigate('HomeScreen');
+        goTo('HomeScreen');
       }
     }
   };

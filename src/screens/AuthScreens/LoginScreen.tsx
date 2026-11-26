@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  Alert,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -25,6 +26,8 @@ import { useAuth } from '../../context/AuthContext';
 import { useDimensions } from '../../hooks/useDimensions';
 import { useLandscapeSidePadding } from '../../hooks/useLandscapeSidePadding';
 import { analyticsService } from '../../services/analyticsService';
+import { tryBeginSubmit, endSubmit } from '../../services/authFlowGuards';
+import { pendingOtpService } from '../../services/pendingOtpService';
 
 const INITIAL_FORM_DATA = {
   email: '',
@@ -56,7 +59,15 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
   const [deviceModalVisible, setDeviceModalVisible] = useState(false);
   const [deviceRequestLoading, setDeviceRequestLoading] = useState(false);
 
+  // ✅ One request at a time (audit 2026-11-26, finding 1). `loading` disables
+  // the button only after the re-render, so two taps in the same frame both got
+  // through: two logins, two tokens, and the server revokes the older one. A ref
+  // flipped synchronously cannot be passed twice (same fix as tryBeginPurchase).
+  const submittingRef = useRef(false);
+  const transferRef = useRef(false);
+
   const handleLogin = useCallback(async () => {
+    if (!tryBeginSubmit(submittingRef)) return;
     clearAllErrors();
 
     const validationErrors = validateLoginForm(
@@ -68,6 +79,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
       setErrors(validationErrors);
       const firstError = Object.values(validationErrors)[0];
       if (firstError) toastError(t('login:errors.validationFailed'), firstError);
+      endSubmit(submittingRef);
       return;
     }
 
@@ -78,6 +90,10 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
         formData.email.trim().toLowerCase(),
         formData.password
       );
+
+      // ✅ Overtaken by a newer token request: its token was not saved, so this
+      // response must not log in or navigate (the newer one does that).
+      if (response.superseded) return;
 
       if (response.success) {
         toastSuccess(t('login:success'), t('login:welcomeBack'));
@@ -104,9 +120,29 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
           setErrors({ password: t('login:errors.invalidCredentials') });
           toastError(t('login:errors.invalidCredentialsTitle'), t('login:errors.invalidCredentials'));
           break;
-        case 'email_not_verified':
-          toastError(t('login:errors.emailNotVerifiedTitle'), t('login:errors.emailNotVerified'));
+        case 'email_not_verified': {
+          // ✅ Registered in this app but the code was never entered (app killed
+          // on the OTP screen, or left it): reopen the code screen for that
+          // registration instead of a dead end (audit 2026-11-26, finding 3).
+          // The server keeps the token until a new registration replaces it,
+          // and Resend works on it, so an expired code is not a problem.
+          const email = formData.email.trim().toLowerCase();
+          const pending = await pendingOtpService.getFor(email);
+          // ✅ Alert, not a toast (layout audit 2026-11-26): the toast shows 2
+          // message lines and these texts take 3-12 at 320-393pt (fr / nl, larger
+          // text) - the instructions were cut with "…" in portrait and landscape.
+          if (pending) {
+            Alert.alert(t('login:errors.emailNotVerifiedTitle'), t('login:errors.emailNotVerifiedResume'));
+            navigation.navigate('OTPVerificationScreen', {
+              email,
+              verification_token: pending.verification_token,
+              purpose: 'registration',
+            });
+          } else {
+            Alert.alert(t('login:errors.emailNotVerifiedTitle'), t('login:errors.emailNotVerified'));
+          }
           break;
+        }
         case 'account_disabled':
           toastError(t('login:errors.accountDisabledTitle'), t('login:errors.accountDisabled'));
           break;
@@ -142,10 +178,14 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
       }
     } finally {
       setLoading(false);
+      endSubmit(submittingRef);
     }
-  }, [formData, clearAllErrors, setErrors, handleAfterAuth, login, t]);
+  }, [formData, clearAllErrors, setErrors, handleAfterAuth, login, t, navigation]);
 
   const handleDeviceTransfer = useCallback(async () => {
+    // ✅ Same one-at-a-time gate: a second request would only bounce off the
+    // server's cooldown and close the modal with a misleading error toast.
+    if (!tryBeginSubmit(transferRef)) return;
     setDeviceRequestLoading(true);
 
     try {
@@ -227,6 +267,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
       }
     } finally {
       setDeviceRequestLoading(false);
+      endSubmit(transferRef);
     }
   }, [formData, navigation, setErrors, t]);
 

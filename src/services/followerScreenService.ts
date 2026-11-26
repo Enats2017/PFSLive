@@ -1,5 +1,5 @@
 import { apiClient } from "./api";
-import { API_CONFIG, getApiEndpoint } from "../constants/config";
+import { API_CONFIG, getApiEndpoint, getDeviceId } from "../constants/config";
 import { getCurrentLanguageId } from "../i18n";
 
 // ─── Interfaces ───────────────────────────────────────────────────────────────
@@ -33,7 +33,11 @@ export const suggestionService = {
   async getSuggestions(params: SuggestionParams): Promise<SuggestionItem[]> {
     try {
       const url = getApiEndpoint(API_CONFIG.ENDPOINTS.EVENTS_LIST);
-      const headers = await API_CONFIG.getHeaders();
+      // ✅ X-Device-Id: per-phone rate limit on the server (ApiSecurity
+      // rate_scope_field) instead of per venue IP; a header, so the response
+      // cache (keyed on the body) is unchanged (app audit 2026-11-26).
+      const deviceId = await getDeviceId().catch(() => '');
+      const headers = { ...(await API_CONFIG.getHeaders()), ...(deviceId ? { 'X-Device-Id': deviceId } : {}) };
 
       const requestBody = {
         language_id: getCurrentLanguageId(),

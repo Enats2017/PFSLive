@@ -24,7 +24,11 @@
     "permission_message": "Please allow photo access to change your avatar.",
     "camera_permission": "Camera permission is required to take photos.",
     "invalid_user_id": "Invalid user ID",
-    "generic_error": "Something went wrong. Please try again."
+    "generic_error": "Something went wrong. Please try again.",
+    "save_failed_title": "Not saved",
+    "save_no_connection": "No internet connection. Your changes were not saved - please try again.",
+    "save_picture_rejected": "This photo could not be used (too large or not a JPG/PNG). Nothing was saved - choose another photo or remove it, then save again.",
+    "save_generic": "Your changes could not be saved. Please try again."
   },
   "validation": {
     "firstname_invalid": "First name must be at least 2 characters",
@@ -85,7 +89,9 @@
     "verify_email_message": "A verification code was sent to your new email address.",
     "saved_title": "Saved",
     "saved_message": "Your profile has been updated.",
-    "success_profile_updated": "Profile updated successfully!"
+    "success_profile_updated": "Profile updated successfully!",
+    "draft_restored_title": "Unsaved changes restored",
+    "draft_restored": "We kept the changes you had not saved yet. Check them and tap Save changes."
   },
   "avatar": {
     "remove_photo": "Remove photo",

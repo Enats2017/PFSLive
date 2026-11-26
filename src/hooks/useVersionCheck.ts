@@ -13,6 +13,10 @@ const MIN_INTERVAL_MS = 60 * 60 * 1000; // 1h — foreground toggling shouldn't 
 const TRACKING_PARAMS_KEY = '@PFSLive:trackingParams';
 
 
+/** Pure: does this result count as a completed check for the 1 h throttle? */
+export const shouldStampCheck = (result: { failed?: boolean } | null | undefined): boolean =>
+  !!result && result.failed !== true;
+
 async function isTrackingActive(): Promise<boolean> {
   try {
     const raw = await AsyncStorage.getItem(TRACKING_PARAMS_KEY);
@@ -48,7 +52,12 @@ export function useVersionCheck() {
     inFlight.current = true;
     try {
       const result = await versionService.checkVersion();
-      await AsyncStorage.setItem(LAST_CHECK_KEY, String(Date.now()));
+      // ✅ Only a check that reached the server counts (audit 2026-11-26): a
+      // failed one (offline cold start) was stamped too, so the next check was
+      // an hour away. Unstamped, the 5-min poll / next foreground retries.
+      if (shouldStampCheck(result)) {
+        await AsyncStorage.setItem(LAST_CHECK_KEY, String(Date.now()));
+      }
 
       if (!result.needsUpdate) {
         if (API_CONFIG.DEBUG) console.log('✅ App is up to date');

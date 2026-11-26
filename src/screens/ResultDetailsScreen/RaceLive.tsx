@@ -35,9 +35,12 @@ interface RaceLiveProps {
     raceInfo?: RaceInfo;
     event?: ResultDetailEvent;
     checkpoints?: CheckpointDetail[];
+    /** The polls since `lastUpdatedAt` failed: the data shown is not live. */
+    stale?: boolean;
+    lastUpdatedAt?: number | null;
 }
 
-const RaceLive: React.FC<RaceLiveProps> = ({ raceInfo, event, checkpoints }) => {
+const RaceLive: React.FC<RaceLiveProps> = ({ raceInfo, event, checkpoints, stale = false, lastUpdatedAt = null }) => {
     const { t } = useTranslation(['resultdetails', 'common']);
     // 12pt headings only below 360pt; 14pt fits the column from 360pt (verify pass 2026-10-22)
     const narrow = isNarrowWidth(useWindowDimensions().width);
@@ -61,13 +64,16 @@ const RaceLive: React.FC<RaceLiveProps> = ({ raceInfo, event, checkpoints }) => 
         const initial = parseTimeToSeconds(raceInfo.server_time);
         setElapsedSeconds(initial);
 
-        if (event?.race_status === 'in_progress') {
+        // ✅ Not while the polls fail (app audit 2026-11-26): the clock is
+        // only a guess between two answers, and it kept counting past the
+        // runner's real finish for as long as the network was down.
+        if (event?.race_status === 'in_progress' && !stale) {
             const interval = setInterval(() => {
                 setElapsedSeconds(prev => prev + 1);
             }, 1000);
             return () => clearInterval(interval);
         }
-    }, [raceInfo?.server_time, event?.race_status]);
+    }, [raceInfo?.server_time, event?.race_status, stale]);
 
     const lastCheckpoint = [...(checkpoints || [])]
         .reverse()
@@ -107,6 +113,13 @@ const RaceLive: React.FC<RaceLiveProps> = ({ raceInfo, event, checkpoints }) => 
                     rows. Status and distance were chips left over from the old
                     two-tone banner. */}
                 <Text style={resultInfoStyles.sectionLabel}>{t('raceInfo.raceResult')}</Text>
+                {stale && (
+                    <Text style={[resultInfoStyles.rowLabel, { color: palette.danger }]}>
+                        {lastUpdatedAt
+                            ? t('raceInfo.staleSince', { time: formatClockTime(new Date(lastUpdatedAt).toTimeString().slice(0, 5)) })
+                            : t('raceInfo.staleNoTime')}
+                    </Text>
+                )}
 
                 {/* rowLabelFixed / rowValueEnd on these rows: the value never
                     shrank, so a long one crushed the label ("Distance" broke a

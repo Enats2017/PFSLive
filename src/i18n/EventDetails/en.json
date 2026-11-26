@@ -71,6 +71,8 @@
     "eventFinishedMessage": "This event has already finished. Registration is no longer available.",
     "validationErrorTitle": "Validation error",
     "validationErrorMessage": "The information provided is invalid. Please check and try again.",
+    "inProgressTitle": "Still being processed",
+    "inProgressMessage": "Your registration is still being processed. Please try again in a moment.",
     "participant_not_found": "Participant not found."
   },
   "registrationModal": {

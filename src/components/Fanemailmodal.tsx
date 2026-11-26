@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, Modal, StyleSheet, Platform, KeyboardEvent, Keyboard, useWindowDimensions } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
@@ -34,6 +34,10 @@ export const FanEmailModal: React.FC<FanEmailModalProps> = ({ visible, onSave, o
     const [email, setEmail] = useState('');
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [isSaving, setIsSaving] = useState(false);
+    // ✅ One Save at a time (audit 2026-11-26, L2): `disabled={isSaving}` only
+    // applies after a re-render, so a double tap sent the e-mail twice and ran
+    // onSave twice (two navigations to the fan screen).
+    const savingRef = useRef(false);
 
 
     // Keyboard height pads the bottom of the wrapper so the (scrollable) card
@@ -88,11 +92,14 @@ export const FanEmailModal: React.FC<FanEmailModalProps> = ({ visible, onSave, o
             return;
         }
 
+        if (savingRef.current) return;
+        savingRef.current = true;
         setErrorMessage(null);
         setIsSaving(true);
 
         const result = await fanEmailApi.updateEmail(trimmed);
 
+        savingRef.current = false;
         setIsSaving(false);
 
         if (!result.success) {

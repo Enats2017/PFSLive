@@ -29,7 +29,12 @@
     "test:live-map-requests": "tsc src/utils/liveMapRequests.ts src/utils/liveMapRequests.test.ts --rootDir src --target es2019 --module commonjs --moduleResolution node --esModuleInterop --skipLibCheck --outDir .cardtest && node .cardtest/utils/liveMapRequests.test.js",
     "test:picker-date-bounds": "tsc src/utils/pickerDateBounds.ts src/utils/pickerDateBounds.test.ts --rootDir src --target es2019 --module commonjs --moduleResolution node --esModuleInterop --skipLibCheck --outDir .cardtest && node .cardtest/utils/pickerDateBounds.test.js",
     "test:otp-sender": "node tests/i18n/otp_sender.test.js",
-    "test:iap-purchase-flow": "tsc src/hooks/iapPurchaseFlow.ts src/hooks/iapPurchaseFlow.test.ts --rootDir src --target es2019 --module commonjs --moduleResolution node --esModuleInterop --skipLibCheck --outDir .cardtest && node .cardtest/hooks/iapPurchaseFlow.test.js"
+    "test:iap-purchase-flow": "tsc src/hooks/iapPurchaseFlow.ts src/hooks/iapPurchaseFlow.test.ts --rootDir src --target es2019 --module commonjs --moduleResolution node --esModuleInterop --skipLibCheck --outDir .cardtest && node .cardtest/hooks/iapPurchaseFlow.test.js",
+    "test:auth-flow": "tsc src/services/authFlowGuards.ts src/services/deviceIdStore.ts src/services/authFlowGuards.test.ts --rootDir src --target es2019 --module commonjs --moduleResolution node --esModuleInterop --skipLibCheck --outDir .cardtest && node .cardtest/services/authFlowGuards.test.js",
+    "test:registration-flow": "tsc src/screens/EventDetails/registrationFlow.ts src/screens/EventDetails/registrationFlow.test.ts --rootDir src --target es2019 --module commonjs --moduleResolution node --esModuleInterop --skipLibCheck --resolveJsonModule --outDir .cardtest && node .cardtest/screens/EventDetails/registrationFlow.test.js",
+    "test:personal-events": "node tests/personal_events/app.test.js",
+    "test:follow-audit": "node tests/follow/followAudit.test.js",
+    "test:results": "node tests/results/app.test.js"
   },
   "dependencies": {
     "@expo-google-fonts/inter": "^0.4.2",

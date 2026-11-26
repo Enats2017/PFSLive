@@ -26,6 +26,12 @@ import { EditPersonalEventpops } from '../../types/navigation';
 import { toastError, toastSuccess } from '../../../utils/toast';
 import { FileCard } from '../../components/FileCard';
 import { useLandscapeSidePadding, useSafeAreaEdges } from '../../hooks/useLandscapeSidePadding';
+import { tryBeginSubmit, endSubmit, hasNoMappedField, editTimezoneToSend, isTrackingRecent } from './personalEventGuards';
+import {
+  EDIT_EVENT_DRAFT_KEY, EditDraftValues, editDraftSnapshot, editDraftDiff, serializeEditDraft, usableEditDraft,
+} from './personalEventGuards';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { startReminderService } from '../../services/startReminderService';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const MB = MAX_FILE_SIZE / 1_048_576;
@@ -48,6 +54,7 @@ const EditPersonalEvent: React.FC<EditPersonalEventpops> = ({ route, navigation 
     validateForm,
     handlers,
     loadedDate,
+    loadedStartTime,
   } = useEditPersonalEventForm();
 
   // ✅ Normally today, but an already-started event keeps its own race_date
@@ -76,7 +83,24 @@ const EditPersonalEvent: React.FC<EditPersonalEventpops> = ({ route, navigation 
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // ✅ Synchronous submit gate (audit 2026-11-26) — see CreatePersonalEvent.
+  const submitGateRef = useRef(false);
   const hasFetched = useRef(false);
+
+  // ✅ UNSAVED EDIT SURVIVES A LOGOUT (re-audit A11) — same scheme as
+  // EditProfileScreen / profileDraftService. A 401 on Home logs out and this
+  // screen is removed by conditional rendering (no beforeRemove), so the
+  // changed fields are kept on disk while they differ from the loaded event,
+  // and offered back the next time THIS event's edit screen opens for the
+  // same account (< 24 h, never a file). Save or an intentional leave
+  // discards the draft.
+  const loadedOkRef = useRef(false);
+  const draftOffRef = useRef(false);
+  const keepDraftOnLeaveRef = useRef(false);
+  const draftRestoredRef = useRef(false);
+  const [baseline, setBaseline] = useState<EditDraftValues | null>(null);
+  const [customerIdForDraft, setCustomerIdForDraft] = useState<number | null>(null);
+  const [draftChecked, setDraftChecked] = useState(false);
   const isBusy = isSubmitting || isPickingFile;
 
   useEffect(() => {
@@ -92,11 +116,14 @@ const EditPersonalEvent: React.FC<EditPersonalEventpops> = ({ route, navigation 
         if (cancelled) return;
         if (API_CONFIG.DEBUG) console.log('✅ Event loaded:', event);
         initFormFromEvent(event);
+        loadedOkRef.current = true;
         if (event.gpx_path) initExistingFile(event.gpx_path);
       } catch (err: any) {
         if (cancelled) return;
         if (API_CONFIG.DEBUG) console.error('❌ Load event failed:', err?.message);
         toastError(t('common:errors.generic'), t('personal:errors.loadFailed'));
+        // Not an intentional leave: a kept draft must survive a failed load.
+        keepDraftOnLeaveRef.current = true;
         navigation.goBack();
       } finally {
         if (!cancelled) setIsLoading(false);
@@ -106,6 +133,64 @@ const EditPersonalEvent: React.FC<EditPersonalEventpops> = ({ route, navigation 
     loadEvent();
     return () => { cancelled = true; };
   }, [eventId, initFormFromEvent, initExistingFile, navigation, t]);
+
+  useEffect(() => {
+    void tokenService.getCustomerId().then(setCustomerIdForDraft).catch(() => { /* no draft */ });
+  }, []);
+
+  // The loaded event, as the draft compares against it (set once).
+  useEffect(() => {
+    if (!isLoading && loadedOkRef.current && baseline === null) setBaseline(editDraftSnapshot(formData));
+  }, [isLoading, formData, baseline]);
+
+  // Offer a kept draft back once — then the writer below may run.
+  useEffect(() => {
+    if (!baseline || !customerIdForDraft || draftRestoredRef.current) return;
+    draftRestoredRef.current = true;
+    (async () => {
+      let values: EditDraftValues | null = null;
+      try {
+        values = usableEditDraft(await AsyncStorage.getItem(EDIT_EVENT_DRAFT_KEY), eventId, customerIdForDraft, Date.now());
+      } catch { /* nothing restored */ }
+      if (values && !draftOffRef.current) {
+        if (values.name !== undefined) handlers.handleNameChange(values.name ?? '');
+        const type = eventTypeOptions.find((o) => o.value === values.eventTypeId);
+        if (type) handlers.handleEventTypeChange(type);
+        const cat = categoryOptions.find((o) => o.value === values.categoryId);
+        if (cat) handlers.handleCategoryChange(cat);
+        if (values.date) handlers.handleDateChange(values.date);
+        if (values.startTime !== undefined) {
+          if (values.startTime) handlers.handleStartTimeChange(values.startTime);
+          else handlers.handleClearStartTime();
+        }
+        toastSuccess(t('personal:draft.restoredTitle'), t('personal:draft.restoredMessage'));
+      }
+      setDraftChecked(true);
+    })();
+  }, [baseline, customerIdForDraft, eventId, handlers, eventTypeOptions, categoryOptions, t]);
+
+  // Keep the changed fields while they differ from the loaded event.
+  useEffect(() => {
+    if (!baseline || !customerIdForDraft || !draftChecked || draftOffRef.current) return;
+    const timer = setTimeout(() => {
+      if (draftOffRef.current) return;
+      const diff = editDraftDiff(editDraftSnapshot(formData), baseline);
+      void (diff
+        ? AsyncStorage.setItem(EDIT_EVENT_DRAFT_KEY, serializeEditDraft(eventId, customerIdForDraft, diff, Date.now()))
+        : AsyncStorage.removeItem(EDIT_EVENT_DRAFT_KEY)).catch(() => { /* silent */ });
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [formData, baseline, customerIdForDraft, draftChecked, eventId]);
+
+  // Leaving on purpose (Back / navigation) — a logout fires no beforeRemove.
+  useEffect(() => {
+    const unsub = navigation.addListener('beforeRemove', () => {
+      draftOffRef.current = true;
+      if (keepDraftOnLeaveRef.current) return;
+      void AsyncStorage.removeItem(EDIT_EVENT_DRAFT_KEY).catch(() => { /* silent */ });
+    });
+    return unsub;
+  }, [navigation]);
 
   // ✅ Map API field error codes → form field errors using language keys
   // PHP edit API returns identical field codes to the create API
@@ -133,6 +218,11 @@ const EditPersonalEvent: React.FC<EditPersonalEventpops> = ({ route, navigation 
         case 'start_hour_invalid':
           setFieldError('startTime', t('personal:errors.invalidStartTime'));
           break;
+        // ✅ Mapped since the 2026-11-26 audit: unmapped, the form said nothing.
+        case 'timezone_required':
+        case 'timezone_invalid':
+          setFieldError('startTime', t('personal:errors.timezoneInvalid'));
+          break;
         case 'gpx_too_large':
           setFieldError('file', t('personal:errors.fileTooLarge', { size: MAX_FILE_SIZE / (1024 * 1024) }));
           break;
@@ -143,6 +233,7 @@ const EditPersonalEvent: React.FC<EditPersonalEventpops> = ({ route, navigation 
           break;
         case 'gpx_upload_failed':
         case 'gpx_save_failed':
+        case 'gpx_read_failed':
           setFieldError('file', t('personal:errors.filePickFailed'));
           break;
         default:
@@ -153,8 +244,10 @@ const EditPersonalEvent: React.FC<EditPersonalEventpops> = ({ route, navigation 
   }, [setFieldError, t]);
 
   const handleSubmit = useCallback(async () => {
+    if (submitGateRef.current) return;
     clearAllErrors();
     if (!validateForm() || isSubmitting) return;
+    if (!tryBeginSubmit(submitGateRef)) return;
 
     setIsSubmitting(true);
 
@@ -168,7 +261,15 @@ const EditPersonalEvent: React.FC<EditPersonalEventpops> = ({ route, navigation 
         categoryId: formData.selectedCategory?.value ?? null,
         date: formData.date,
         startTime: formData.startTime,
-        timezone: getDeviceTimezone(),
+        // ✅ Only when date or time changed (audit 2026-11-26) — a rename made
+        // abroad no longer moves the start by the zone offset.
+        timezone: editTimezoneToSend({
+          date: formData.date,
+          startTime: formData.startTime,
+          loadedDate,
+          loadedStartTime,
+          deviceTimezone: getDeviceTimezone(),
+        }),
         selectedFile: selectedFile ?? undefined,
         removeGpx: shouldRemoveGpx,
       });
@@ -177,7 +278,15 @@ const EditPersonalEvent: React.FC<EditPersonalEventpops> = ({ route, navigation 
 
       // ✅ Handle API field-level validation errors — map to inline form errors
       if (!response.success && response.fields && response.fields.length > 0) {
-        applyApiFieldErrors(response.fields);
+        // ✅ Codes the form cannot show get a toast (audit 2026-11-26) — the
+        // form used to stay silent and the spinner just stopped.
+        if (hasNoMappedField(response.fields)) {
+          // ✅ Short title (layout audit 2026-11-26): a toast title is ONE line, and
+          // "Something went wrong. Please try again." was cut with "…" below ~430pt.
+          toastError(t('personal:errors.validationErrorTitle'), t('personal:errors.updateFailed'));
+        } else {
+          applyApiFieldErrors(response.fields);
+        }
         return;
       }
 
@@ -192,7 +301,11 @@ const EditPersonalEvent: React.FC<EditPersonalEventpops> = ({ route, navigation 
             break;
           // Server lock (2026-10-30): > 10 min tracked — same rule that hides Edit on Profile.
           case 'tracking_already_started':
-            toastError(t('common:errors.generic'), t('personal:errors.trackingStarted'));
+            // ✅ reason 'tracking_recent' = tracked minutes ago, temporary
+            // (re-audit 2026-11-26) — not the permanent "can no longer be edited".
+            toastError(t('common:errors.generic'), isTrackingRecent(response)
+              ? t('personal:errors.trackingRecent')
+              : t('personal:errors.trackingStarted'));
             break;
           case 'product_custom_app_id_invalid':
             toastError(t('common:errors.generic'), t('personal:errors.invalidEventId'));
@@ -204,6 +317,13 @@ const EditPersonalEvent: React.FC<EditPersonalEventpops> = ({ route, navigation 
         return;
       }
 
+      // ✅ Only when this event owns the reminders (re-audit 2026-11-26):
+      // cancel() also dropped the real next race's. Home re-plans from the
+      // new date on its next answer.
+      void startReminderService.cancelIfFor(route.params.participantId);
+      // ✅ Saved: the kept draft is obsolete (re-audit A11).
+      draftOffRef.current = true;
+      void AsyncStorage.removeItem(EDIT_EVENT_DRAFT_KEY).catch(() => { /* silent */ });
       toastSuccess(t('personal:success.title'), t('personal:success.editMessage'));
 
       const customer_app_id = await tokenService.getCustomerId();
@@ -221,11 +341,12 @@ const EditPersonalEvent: React.FC<EditPersonalEventpops> = ({ route, navigation 
       );
     } finally {
       setIsSubmitting(false);
+      endSubmit(submitGateRef);
     }
   }, [
     clearAllErrors, validateForm, isSubmitting, eventId,
     formData, selectedFile, shouldRemoveGpx, navigation,
-    applyApiFieldErrors, t,
+    applyApiFieldErrors, t, loadedDate, loadedStartTime,
   ]);
 
   const showNewFile = !!selectedFile;

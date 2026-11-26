@@ -8,7 +8,7 @@ import { LocationData } from './locationService';
 import { API_CONFIG } from '../constants/config';
 import i18n from '../i18n'; // adjust to wherever your configured i18next instance lives
 import { trackingSafetyService } from './trackingSafetyService';
-import { isStaleSession } from './trackingSessionRules';
+import { isStaleSession, PREVIOUS_DAY_QUIET_MS } from './trackingSessionRules';
 
 export interface GPSPosition {
   latitude: number;
@@ -41,6 +41,11 @@ export const BACKGROUND_LOCATION_TASK = 'background-location-task';
 
 const TRACKING_PARAMS_KEY = '@PFSLive:trackingParams';
 const LAST_SENT_KEY = '@PFSLive:lastSentAt';
+// ✅ When a live send attempt last followed a gap of PREVIOUS_DAY_QUIET_MS
+// without one (2026-11-26 review): tells a session still sending on an overnight
+// course from a previous day's session that went quiet and came back this
+// morning (HomeScreen's previous-day check, isPreviousDaySession).
+const QUIET_GAP_END_KEY = '@PFSLive:quietGapEndedAt';
 // ✅ When THIS tracking session began, for the elapsed timer on the home screen
 // (02_Home-Tracking-Active.png) and the 5-minute check in maybeUploadInterimLog.
 // Set only for a genuinely new race — a mid-race relaunch must keep the
@@ -85,6 +90,25 @@ const TRANSISTOR_ACTIVE_KEY = '@PFSLive:transistorActive';
 // session start (not in _doFullStop), so a finish-in-background upload survives
 // until the user foregrounds and stops cleanly.
 export const LOG_UPLOADED_KEY = '@PFSLive:logUploaded';
+// ✅ RECOVERABLE CLAIM (2026-11-26 re-audit). Every log uploader claims
+// LOG_UPLOADED_KEY before its network call (that stops duplicate rows). The
+// claim used to be the final '1': Livio killed during the upload left '1'
+// behind, every later retry read "already uploaded" and dropped the pending
+// key — the log was never sent. Now a claim is 'claim:<ms>' and only a
+// confirmed upload writes '1'. A claim older than LOG_CLAIM_STALE_MS (the
+// upload's hard timeout is 12 s) belongs to an upload that died with the app
+// and may be taken over.
+export const LOG_CLAIM_STALE_MS = 60 * 1000;
+export const logClaimValue = (now: number = Date.now()): string => `claim:${now}`;
+/** Uploaded ('1') or claimed by an upload that may still be running. */
+export const isLogUploadTaken = (v: string | null | undefined, now: number = Date.now()): boolean => {
+  if (v === '1') return true;
+  if (typeof v === 'string' && v.startsWith('claim:')) {
+    const at = parseInt(v.slice(6), 10);
+    return isFinite(at) && at <= now && now - at < LOG_CLAIM_STALE_MS;
+  }
+  return false;
+};
 // ✅ Last onLocation/onMotionChange fire timestamp. Used by the freeze
 // diagnostic to distinguish a real OS freeze (Transistor not firing at all)
 // from a false-positive (Transistor firing normally but every event suppressed
@@ -725,7 +749,7 @@ const _uploadTrackingLogOnFinish = async (
     // the upload entirely. LOG_UPLOADED_KEY (set only after a successful upload)
     // means whichever path runs first uploads and the rest skip — no double, no drop.
     try {
-      if ((await AsyncStorage.getItem(LOG_UPLOADED_KEY)) === '1') return;
+      if (isLogUploadTaken(await AsyncStorage.getItem(LOG_UPLOADED_KEY))) return;
     } catch { /* fall through and attempt the upload */ };
     // Persist the in-memory buffer first so the 🏆 / 🛑 finish entries are in it,
     // then stitch the whole ride (all sealed segments + current) for upload.
@@ -761,12 +785,13 @@ const _uploadTrackingLogOnFinish = async (
     // claim is released again if the save fails, so the other path still retries
     // — which is the behaviour the comment above always described but, because
     // saveTrackingLog swallowed its errors and returned void, never actually had.
-    await AsyncStorage.setItem(LOG_UPLOADED_KEY, '1');
+    await AsyncStorage.setItem(LOG_UPLOADED_KEY, logClaimValue());
     const uploaded = await locationService.saveTrackingLog(participantId, eventId, logs, sentCount, remaining);
     if (uploaded === false) {
       try { await AsyncStorage.removeItem(LOG_UPLOADED_KEY); } catch { /* silent */ }
       return;
     }
+    await AsyncStorage.setItem(LOG_UPLOADED_KEY, '1');   // confirmed — see LOG_CLAIM_STALE_MS
     if (API_CONFIG.DEBUG) console.log('📤 Tracking log uploaded from background after finish');
   } catch {
     // Silent — leave LOG_UPLOADED_KEY unset so the foreground stop retries.
@@ -1478,6 +1503,13 @@ const _processLocationForSendInternal = async (
     // ✅ Commit throttle + position BEFORE the network call. Future fires that
     // arrive before our network round-trip completes will see this timestamp
     // and throttle themselves correctly.
+    if (lastSentAt > 0 && now - lastSentAt >= PREVIOUS_DAY_QUIET_MS) {
+      // A queued fix inside the gap was activity too (getSessionActivity).
+      const lastQueuedAt = parseInt((await AsyncStorage.getItem(LAST_QUEUED_KEY)) || '0', 10) || 0;
+      if (!(lastQueuedAt > lastSentAt && now - lastQueuedAt < PREVIOUS_DAY_QUIET_MS)) {
+        await AsyncStorage.setItem(QUIET_GAP_END_KEY, String(now));
+      }
+    }
     await AsyncStorage.setItem(LAST_SENT_KEY, String(now));
     await AsyncStorage.setItem(LAST_POSITION_KEY, JSON.stringify({
       lat: location.latitude,
@@ -2324,6 +2356,7 @@ const _doFullStop = async (): Promise<void> => {
   // onAlive sees no session and does nothing. Never throws.
   await trackingSafetyService.disarm();
   await AsyncStorage.removeItem(LAST_SENT_KEY);
+  await AsyncStorage.removeItem(QUIET_GAP_END_KEY);
   await AsyncStorage.removeItem(LAST_POSITION_KEY);
   await AsyncStorage.removeItem(RECENT_FIX_TS_KEY);
   await AsyncStorage.removeItem(LAST_ALTITUDE_KEY);
@@ -2640,6 +2673,21 @@ export const getTrackingParams = async (): Promise<{
  * Display only — nothing here feeds the send path, and every part degrades to
  * null rather than throwing, so a missing odometer cannot affect tracking.
  */
+// ✅ PUBLIC: the live session's send activity for isPreviousDaySession (see
+// QUIET_GAP_END_KEY). 0 = none / unreadable. Never throws.
+// A fix QUEUED counts as activity too (2026-11-26 re-audit): behind a backlog,
+// or offline, a live fix goes into the queue and never touches LAST_SENT — an
+// offline runner on an overnight course looked "quiet" for hours.
+export const getSessionActivity = async (): Promise<{ lastSentAt: number; quietGapEndedAt: number }> => {
+  const num = async (k: string) => {
+    try { const n = parseInt((await AsyncStorage.getItem(k)) || '0', 10); return isFinite(n) && n > 0 ? n : 0; } catch { return 0; }
+  };
+  return {
+    lastSentAt: Math.max(await num(LAST_SENT_KEY), await num(LAST_QUEUED_KEY)),
+    quietGapEndedAt: await num(QUIET_GAP_END_KEY),
+  };
+};
+
 export const getSessionStats = async (): Promise<{
   startedAt: number | null;
   distanceKm: number | null;
@@ -3180,6 +3228,12 @@ export const gpsService = {
       await AsyncStorage.removeItem(NEAR_FINISH_KEY);
       await AsyncStorage.removeItem(LAST_LOC_FIRE_KEY);
       await AsyncStorage.removeItem(LOG_UPLOADED_KEY);
+      // ✅ A previous session's log upload still waiting (Stop / finish while
+      // offline or killed) belongs to the log reset above (or, on a same-race
+      // resume, to a log that now keeps growing). Kept, HomeScreen's retry
+      // uploaded THIS session's log under it mid-race and set logUploaded=1, so
+      // this session's own finish / Stop log was then skipped (2026-11-26 audit).
+      await AsyncStorage.removeItem(PENDING_FINISH_KEY);
       // A finish detected on the live path never runs _doFullStop, so last
       // race's warning banner / drain-failure / offline-cooldown state could
       // otherwise greet the runner at the start of this one.
@@ -3212,6 +3266,7 @@ export const gpsService = {
       // "raceAlreadyStarted ? '0' : now" conditional — the race-start gate
       // inside processLocationForSend handles pre-race blocking.
       await AsyncStorage.setItem(LAST_SENT_KEY, '0');
+      await AsyncStorage.removeItem(QUIET_GAP_END_KEY);   // new session: no gap yet
 
       // ✅ TRANSISTOR — sole GPS engine for both background sends AND the
       // foreground UI display. Native foreground service + WakeLock keeps the

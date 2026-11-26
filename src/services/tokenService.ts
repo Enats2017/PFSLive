@@ -192,6 +192,13 @@ export const tokenService = {
     } catch (error) {
       console.error('❌ Error saving token, falling back to AsyncStorage:', error);
       await writeFallback(LEGACY_TOKEN_KEY, token);
+      // ✅ Drop the PREVIOUS secure token too (audit 2026-11-26, finding 10).
+      // readWithFallback prefers SecureStore, so on a Keystore that still reads
+      // but no longer writes, the old entry kept winning over the fallback just
+      // written - and the server revoked that old token the moment this new one
+      // was issued (one token per account), so every login ended in "session
+      // expired". Best effort: if the delete fails too, nothing is lost.
+      await SecureStore.deleteItemAsync(TOKEN_KEY).catch(() => {});
     }
   },
 
@@ -216,6 +223,8 @@ export const tokenService = {
     } catch (error) {
       console.error('❌ Error saving customer id, falling back to AsyncStorage:', error);
       await writeFallback(LEGACY_CUSTOMER_KEY, String(id));
+      // ✅ Same reason as saveToken: a stale secure id must not outrank the new one.
+      await SecureStore.deleteItemAsync(CUSTOMER_KEY).catch(() => {});
     }
   },
 

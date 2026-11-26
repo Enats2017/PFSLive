@@ -98,7 +98,7 @@ module.exports = ({ load, test, SRC }) => {
       if (/<Modal\s/.test(s)) assert.ok(/import \{ MODAL_ORIENTATIONS \} from '[./]+constants\/modalOrientations';/.test(s), p);
     }
     assert.deepStrictEqual(bad, []);
-    assert.strictEqual(n, 30);
+    assert.strictEqual(n, 31);   // +1 2026-11-26: Home's "log in again" popup (same skeleton as the others)
     const { MODAL_ORIENTATIONS } = load('constants/modalOrientations');
     assert.deepStrictEqual(MODAL_ORIENTATIONS, ['portrait', 'landscape', 'landscape-left', 'landscape-right']);
     assert.ok(/orientation: "default"/.test(fs.readFileSync(path.join(SRC, '..', 'app.config.js'), 'utf8')), 'the app rotates');

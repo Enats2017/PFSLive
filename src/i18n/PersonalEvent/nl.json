@@ -48,7 +48,9 @@
     "trackingStarted": "Dit evenement kan niet meer worden bewerkt omdat de tracking al is gestart.",
     "invalidEventId": "Ongeldig evenement. Ga terug en probeer opnieuw.",
     "categoryRequired": "Selecteer een categorietype",
-    "categoryInvalid": "Selecteer een geldige categorie"
+    "categoryInvalid": "Selecteer een geldige categorie",
+    "timezoneInvalid": "De tijdzone van je telefoon kon niet worden gebruikt. Controleer de datum- en tijdinstellingen van je telefoon, of neem contact met ons op.",
+    "trackingRecent": "Je hebt dit evenement enkele minuten geleden getrackt. Probeer het over enkele minuten opnieuw."
   },
   "file": {
     "uploadTitle": "Tik om GPX-bestand te uploaden",
@@ -72,5 +74,9 @@
     "walking": "Wandelen",
     "running": "Hardlopen",
     "cycling": "Fietsen"
+  },
+  "draft": {
+    "restoredTitle": "Wijzigingen hersteld",
+    "restoredMessage": "We hebben je niet-opgeslagen wijzigingen bewaard. Controleer ze en tik op Evenement indienen."
   }
 }

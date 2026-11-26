@@ -56,23 +56,20 @@ if (__DEV__) {
 // which can tick up to 50 times before the navigator is ready.
 // The file-picker path is separate and lives in useFileUpload.
 const navigateToPersonalEvent = (uri: string, fileName: string) => {
+  // ✅ The same file twice within 2 s is one share (audit 2026-11-26): an iOS
+  // cold start delivers it through getInitialURL AND the 'url' event, which
+  // pushed two PersonalEvent forms and counted the import twice.
+  if (isRepeatLink(`gpx:${uri}`)) return;
+
   void analyticsService.logGpxImported('share_intent');
 
-  const navigate = () => {
+  // ✅ whenNavigatorReady (20 s), not a private 5 s poll (audit 2026-11-26): a
+  // slow cold start (fonts + token read) takes longer than 5 s on old phones
+  // (see deepLink.ts), and the share was dropped — on Android for good, since
+  // GpxShare.getIntent() has already cleared it.
+  whenNavigatorReady(() => {
     navigationRef.current?.navigate('PersonalEvent', { sharedFileUri: uri, sharedFileName: fileName });
-  };
-
-  if (navigationRef.isReady()) {
-    navigate();
-  } else {
-    const interval = setInterval(() => {
-      if (navigationRef.isReady()) {
-        clearInterval(interval);
-        navigate();
-      }
-    }, 100);
-    setTimeout(() => clearInterval(interval), 5000);
-  }
+  });
 };
 
 /**
@@ -189,7 +186,9 @@ export default function App() {
         // below does nothing and the runner lands on Home.
         whenNavigatorReady(() => {
           if (product_app_id && event_name) {
-            navigationRef.current?.navigate('EventDetails', { product_app_id, event_name, auto_register_id: null });
+            // ✅ refresh_nonce: the list refetches past its 30 s cache, so the runner sees
+            // "registered" and not the cached Connect (re-audit 2026-11-26, RN2).
+            navigationRef.current?.navigate('EventDetails', { product_app_id, event_name, auto_register_id: null, refresh_nonce: Date.now() });
             // The email-verified connect completes HERE, not in-app (the
             // ParticipantResult path ends in a verification email), so this is
             // the runner's "just connected" moment — open Get race-ready on top

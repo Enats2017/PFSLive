@@ -211,7 +211,8 @@ module.exports = function register({ M, load, test, SRC }) {
   test('Start gate: precise checked AFTER location switch and permission, before the gate is passed; "Start anyway" continues', () => {
     assert.strictEqual(typeof load('services/readinessService').readPrecise, 'function', 'readPrecise exported');
     const s = read('screens/HomeScreen.tsx');
-    const fn = block(s, 'const doStartGPSTracking = useCallback', 6000);
+    // 7000 (was 6000): 2026-11-26 re-audit — the start first waits for a running Stop (trackingLifecycle).
+    const fn = block(s, 'const doStartGPSTracking = useCallback', 7000);
     const sw = fn.indexOf('isLocationServiceEnabled()'), perm = fn.indexOf('!perms.foreground || !perms.background');
     const pr = fn.indexOf('await readPrecise()'), past = fn.indexOf('pendingStartRef.current = false;');
     assert.ok(sw > -1 && perm > sw && pr > perm && past > pr, 'order: switch → permission → precise → past the gate');

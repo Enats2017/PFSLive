@@ -47,6 +47,16 @@ export interface NotificationPermissionState {
 type TokenListener = (token: string | null) => void;
 const tokenListeners = new Set<TokenListener>();
 let currentToken: string | null = null;
+// ✅ When this session last confirmed the token with the server. A push cron
+// clears a token on DeviceNotRegistered (also a transient one); the phone kept
+// skipping it as "already sent" — per session (currentToken) and across
+// launches (expo_push_token) — so only a cold start whose download happened to
+// say follower_not_found ever sent it again. Re-sent at most every
+// TOKEN_RECHECK_MS (register_follower is an idempotent UPSERT) (audit 2026-11-26 #9).
+let tokenCheckedAt = 0;
+const TOKEN_RECHECK_MS = 6 * 60 * 60 * 1000;
+// When the token last REACHED the server (survives restarts, see sendTokenToBackend).
+const TOKEN_SENT_AT_KEY = "@PFSLive:expoTokenSentAt";
 
 /**
  * The server row lost this phone's push token (row gone / deactivated and
@@ -58,8 +68,38 @@ export function forgetSentPushToken(): void {
   currentToken = null;
 }
 
+// ✅ Foreground check that the SERVER still holds the token (audit 2026-11-26
+// FN2). A cron clears a token on DeviceNotRegistered mid-race; the 6 h re-send
+// above is too slow for a race. At most every SERVER_CHECK_MS, one
+// get_follower_data call (by token + device): follower_not_found → the token is
+// sent again right away (same path HomeScreen uses at launch).
+const SERVER_CHECK_MS = 15 * 60 * 1000;
+let serverCheckedAt = 0;
+let serverCheckInFlight = false;
+
+async function verifyTokenOnServer(): Promise<void> {
+  const token = currentToken;
+  if (!token || serverCheckInFlight || Date.now() - serverCheckedAt < SERVER_CHECK_MS) return;
+  serverCheckInFlight = true;
+  serverCheckedAt = Date.now();
+  try {
+    await followerApi.getFollowerData(token);
+  } catch (e: any) {
+    // Only the server's "no row for this token" — a timeout / 5xx says nothing.
+    if (e?.code === "follower_not_found" && currentToken === token) {
+      try { await AsyncStorage.removeItem(EXPO_TOKEN_STORAGE_KEY); } catch { /* still re-sent below */ }
+      forgetSentPushToken();
+      await notificationPermissionService.registerIfGranted();
+    }
+  } finally {
+    serverCheckInFlight = false;
+  }
+}
+
 const emitToken = (token: string | null) => {
   currentToken = token;
+  // Just registered = just confirmed: no server check for SERVER_CHECK_MS.
+  if (token) { tokenCheckedAt = Date.now(); serverCheckedAt = Date.now(); }
   tokenListeners.forEach((l) => {
     try { l(token); } catch { /* listener errors must not break the others */ }
   });
@@ -120,8 +160,18 @@ async function sendTokenToBackend(token: string): Promise<boolean> {
     const savedToken = await AsyncStorage.getItem(EXPO_TOKEN_STORAGE_KEY);
 
     if (savedToken === token) {
-      if (API_CONFIG.DEBUG) console.log("ℹ️ Expo token unchanged — skipping backend registration");
-      return true;
+      // Recently confirmed: skip. No stamp yet (stored by a build before this
+      // one): stamp now and skip — the re-send starts TOKEN_RECHECK_MS later.
+      let sentAt = 0;
+      try { sentAt = Number(await AsyncStorage.getItem(TOKEN_SENT_AT_KEY)) || 0; } catch { /* treat as fresh */ }
+      if (!sentAt) {
+        try { await AsyncStorage.setItem(TOKEN_SENT_AT_KEY, String(Date.now())); } catch { /* next time */ }
+      }
+      if (!sentAt || Date.now() - sentAt < TOKEN_RECHECK_MS) {
+        if (API_CONFIG.DEBUG) console.log("ℹ️ Expo token unchanged — skipping backend registration");
+        return true;
+      }
+      // Older than TOKEN_RECHECK_MS: send it again (the server may have cleared it).
     }
 
     // UPSERT on device_id server-side: a device that was registered as a
@@ -150,6 +200,7 @@ async function sendTokenToBackend(token: string): Promise<boolean> {
     await Promise.all([
       AsyncStorage.setItem(EXPO_TOKEN_STORAGE_KEY, token),
       AsyncStorage.setItem(FOLLOWER_ID_KEY, String(result.follower_id)),
+      AsyncStorage.setItem(TOKEN_SENT_AT_KEY, String(Date.now())),
     ]);
 
     if (API_CONFIG.DEBUG) console.log("💾 Token and follower_id saved to storage");
@@ -280,7 +331,8 @@ export const notificationPermissionService = {
       return null;
     }
     // Already registered this session — don't hit Expo on every foreground.
-    if (currentToken) return currentToken;
+    // …unless that was over TOKEN_RECHECK_MS ago (see tokenCheckedAt).
+    if (currentToken && Date.now() - tokenCheckedAt < TOKEN_RECHECK_MS) return currentToken;
     return fetchAndRegisterToken();
   },
 
@@ -320,5 +372,9 @@ export const notificationPermissionService = {
 
 // Pick up a grant made in the phone's Settings when the user comes back.
 AppState.addEventListener("change", (next) => {
-  if (next === "active") void notificationPermissionService.registerIfGranted();
+  if (next === "active") {
+    void notificationPermissionService.registerIfGranted()
+      .then(() => verifyTokenOnServer())   // see verifyTokenOnServer
+      .catch(() => { /* next foreground */ });
+  }
 });

@@ -48,7 +48,9 @@
     "trackingStarted": "Cet événement ne peut plus être modifié, car le suivi a déjà commencé.",
     "invalidEventId": "Événement invalide. Veuillez revenir en arrière et réessayer.",
     "categoryRequired": "Veuillez sélectionner un type de catégorie",
-    "categoryInvalid": "Veuillez sélectionner une catégorie valide"
+    "categoryInvalid": "Veuillez sélectionner une catégorie valide",
+    "timezoneInvalid": "Le fuseau horaire de votre téléphone n'a pas pu être utilisé. Vérifiez les réglages de date et d'heure de votre téléphone, ou contactez-nous.",
+    "trackingRecent": "Vous avez suivi cet événement il y a quelques minutes. Réessayez dans quelques minutes."
   },
   "file": {
     "uploadTitle": "Appuyez pour télécharger le fichier GPX",
@@ -72,5 +74,9 @@
     "walking": "Marche",
     "running": "Course",
     "cycling": "Cyclisme"
+  },
+  "draft": {
+    "restoredTitle": "Modifications restaurées",
+    "restoredMessage": "Nous avons gardé les modifications non enregistrées. Vérifiez-les et touchez Soumettre l'événement."
   }
 }

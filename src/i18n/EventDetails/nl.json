@@ -71,6 +71,8 @@
     "eventFinishedMessage": "Dit evenement is al afgelopen. Registratie is niet meer mogelijk.",
     "validationErrorTitle": "Validatiefout",
     "validationErrorMessage": "De verstrekte informatie is ongeldig. Controleer en probeer opnieuw.",
+    "inProgressTitle": "Nog bezig",
+    "inProgressMessage": "Je registratie wordt nog verwerkt. Probeer het zo meteen opnieuw.",
     "participant_not_found": "Deelnemer niet gevonden."
   },
   "registrationModal": {

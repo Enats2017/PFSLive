@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import {
   View,
   Text,
@@ -22,6 +22,8 @@ import { useLandscapeSidePadding, useSafeAreaEdges } from '../../hooks/useLandsc
 import NoticeCard from '../../components/NoticeCard'
 import { ANALYTICS_SCREENS } from '../../constants/analyticsScreens'
 import { EMAIL_REGEX, useEditProfile } from '../../hooks/Useeditprofile'
+import { EditProfileFailure, profileDraftDiff } from '../../services/authFlowGuards'
+import { profileDraftService } from '../../services/profileDraftService'
 import { needsParentConsent } from '../../services/validation/authValidation'
 import { fetchProfileApi } from '../../services/profileServices'
 import { tokenService } from '../../services/tokenService'
@@ -108,7 +110,58 @@ const EditProfileScreen = () => {
         picture, setPicture,
         removePicture, setRemovePicture,
         submit,
+        baseline, applyDraft,
     } = useEditProfile(profile)
+
+    // ✅ UNSAVED CHANGES SURVIVE A LOGOUT (re-audit A11). HomeScreen logs out
+    // when the server rejects the token, and that removes this screen by
+    // conditional rendering - no beforeRemove, no chance to save. So the changed
+    // fields are kept on disk while they differ from the loaded profile, and
+    // offered back the next time this screen opens for the same account. Saving
+    // or leaving on purpose (Back) discards the draft.
+    const draftOffRef = useRef(false)
+    const draftRestoredRef = useRef(false)
+    const [customerIdForDraft, setCustomerIdForDraft] = useState<number | null>(null)
+    const [draftChecked, setDraftChecked] = useState(false)
+
+    useEffect(() => {
+        void tokenService.getCustomerId().then(setCustomerIdForDraft)
+    }, [])
+
+    useEffect(() => {
+        if (!baseline || !customerIdForDraft || draftRestoredRef.current) return
+        draftRestoredRef.current = true
+        void profileDraftService.getFor(customerIdForDraft).then((values) => {
+            if (values && !draftOffRef.current) {
+                applyDraft(values as any)
+                toastSuccess(t('profile:messages.draft_restored_title'), t('profile:messages.draft_restored'))
+            }
+            // Only now may the writer below run - earlier it would clear the
+            // stored draft before it was read.
+            setDraftChecked(true)
+        })
+    }, [baseline, customerIdForDraft, applyDraft, t])
+
+    useEffect(() => {
+        if (!baseline || !customerIdForDraft || !draftChecked || draftOffRef.current) return
+        const timer = setTimeout(() => {
+            if (draftOffRef.current) return
+            const diff = profileDraftDiff(form as any, baseline as any)
+            if (diff) void profileDraftService.save(customerIdForDraft, diff)
+            else void profileDraftService.clear()
+        }, 400)
+        return () => clearTimeout(timer)
+    }, [form, baseline, customerIdForDraft, draftChecked])
+
+    useEffect(() => {
+        // Leaving on purpose (Back / navigation) - not a logout, which fires no
+        // beforeRemove - throws the draft away.
+        const unsub = navigation.addListener('beforeRemove', () => {
+            draftOffRef.current = true
+            void profileDraftService.clear()
+        })
+        return unsub
+    }, [navigation])
 
     const savedEmail = (profile?.email ?? '').trim().toLowerCase()
     const typedEmail = form.email.trim().toLowerCase()
@@ -235,9 +288,34 @@ const EditProfileScreen = () => {
 
     // The actual save. `emailOverride` is used by the pending-email banner; a
     // plain Save passes nothing and the form's own email is sent.
+    // ✅ Say why a save failed (audit 2026-11-26, finding 5). Offline, a 401, a
+    // 5xx or a rejected photo used to stop the spinner and show nothing at all -
+    // and with a rejected photo the server saves none of the other edits either.
+    const reportSaveFailure = useCallback((failure?: EditProfileFailure) => {
+        if (!failure) return
+        if (failure === 'session_expired') {
+            toastError(t('errorScreen:codes.session_expired.title'), t('errorScreen:codes.session_expired.message'))
+            void handleSessionExpired()
+            return
+        }
+        const key = failure === 'picture' ? 'save_picture_rejected'
+            : failure === 'network' ? 'save_no_connection'
+            : 'save_generic'
+        // ✅ Alert, not a toast (layout audit 2026-11-26): the toast shows 2
+        // message lines, these take 3-8 at 320-393pt (fr / nl, larger text) - the
+        // "what to do now" part of the photo message was cut with "…".
+        Alert.alert(t('profile:errors.save_failed_title'), t(`profile:errors.${key}`))
+    }, [t, handleSessionExpired])
+
     const performSave = useCallback(async (emailOverride?: string) => {
         const result = await submit(emailOverride ? { email: emailOverride } : undefined)
-        if (!result.ok) return false
+        if (!result.ok) {
+            reportSaveFailure(result.failure)
+            return false
+        }
+        // Saved - nothing left to restore.
+        draftOffRef.current = true
+        void profileDraftService.clear()
 
         const langCode = getLanguageCodeFromId(form.language_id)
         if (langCode) {
@@ -270,7 +348,7 @@ const EditProfileScreen = () => {
             fromEdit: true,
         })
         return true
-    }, [submit, navigation, t, form.language_id, changeLanguage])
+    }, [submit, navigation, t, form.language_id, changeLanguage, reportSaveFailure])
 
      const handleSave = useCallback(async () => {
         if (emailChangeReady) {
@@ -334,7 +412,10 @@ const EditProfileScreen = () => {
         setPendingBusy(true)
         try {
             const result = await submit(undefined, { cancelEmailChange: true })
-            if (!result.ok) return
+            if (!result.ok) {
+                reportSaveFailure(result.failure)
+                return
+            }
             toastSuccess(
                 t('profile:emailChange.pending_cancelled_title'),
                 t('profile:emailChange.pending_cancelled_message'),
@@ -343,7 +424,7 @@ const EditProfileScreen = () => {
         } finally {
             setPendingBusy(false)
         }
-    }, [serverPendingEmail, pendingBusy, submit, t, loadProfile])
+    }, [serverPendingEmail, pendingBusy, submit, t, loadProfile, reportSaveFailure])
 
     const avatarUri: string | null = picture
         ? picture.uri

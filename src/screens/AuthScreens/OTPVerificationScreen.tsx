@@ -8,6 +8,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -25,6 +26,8 @@ import { usePendingRegistration } from '../../hooks/usePendingRegistration';
 import { API_CONFIG, getDeviceId } from '../../constants/config';
 import { useAuth } from '../../context/AuthContext';
 import { analyticsService } from '../../services/analyticsService';
+import { tryBeginSubmit, endSubmit, otpTokenInvalidKey } from '../../services/authFlowGuards';
+import { pendingOtpService } from '../../services/pendingOtpService';
 import { useLandscapeSidePadding, useSafeAreaEdges } from '../../hooks/useLandscapeSidePadding';
 
 const OTP_LENGTH = 6;
@@ -55,6 +58,9 @@ const OTPVerificationScreen: React.FC<OTPVerificationScreenProps> = ({
   const [error, setError] = useState('');
 
   const inputRefs = useRef<TextInput[]>([]);
+  // ✅ Synchronous one-at-a-time gates (see handleVerify / handleResend).
+  const verifyingRef = useRef(false);
+  const resendingRef = useRef(false);
 
   const showErrorToast = useCallback((title: string, message: string) => {
     Toast.show({
@@ -112,6 +118,11 @@ const OTPVerificationScreen: React.FC<OTPVerificationScreenProps> = ({
         return;
       }
 
+      // ✅ One verify at a time (audit 2026-11-26, finding 2). The 6th digit
+      // auto-submits and the Verify button is right below it: both in one frame
+      // sent two verifies, which minted two tokens (one revoked) for the account.
+      if (!tryBeginSubmit(verifyingRef)) return;
+
       setLoading(true);
       setError('');
 
@@ -140,10 +151,16 @@ const OTPVerificationScreen: React.FC<OTPVerificationScreenProps> = ({
               return;
         }
 
+        // ✅ Overtaken by a newer token request: this token is revoked and was
+        // not saved; the newer request does the login (otpService.verify).
+        if (data.superseded) return;
+
         if (data.success && data.data?.token) {
           const customerId = data.data?.customer?.customer_app_id ?? 0;
           await tokenService.saveToken(data.data.token);
           await tokenService.saveCustomerId(customerId);
+          // The stored "resume this registration" entry is spent.
+          if (purpose === 'registration') await pendingOtpService.clear();
 
           if (API_CONFIG.DEBUG) console.log('✅ OTP verified, token saved');
 
@@ -181,9 +198,25 @@ const OTPVerificationScreen: React.FC<OTPVerificationScreenProps> = ({
 
         switch (errorCode) {
           case 'verification_token_invalid':
-            setError(t('otp:errors.tokenInvalid'));
-            showErrorToast(t('otp:errors.tokenInvalidTitle'), t('otp:errors.tokenInvalid'));
+          case 'verification_conflict': {
+            // ✅ For registration / device change a dead token usually means the
+            // step already SUCCEEDED and only the answer was lost (network drop,
+            // app backgrounded): the server NULLs the token on success. "Please
+            // register again" then failed with email_exists. Say "log in" too
+            // (audit 2026-11-26, finding 4).
+            const key = otpTokenInvalidKey(purpose, errorCode) ?? 'tokenInvalid';
+            if (purpose === 'registration') await pendingOtpService.clear();
+            setError(t(`otp:errors.${key}`));
+            // ✅ The "maybe already verified" text is 4-8 lines at 320-393pt (fr /
+            // nl, larger text): a toast shows 2, and the inline copy is under the
+            // keyboard in landscape - an Alert shows all of it (layout audit 2026-11-26).
+            if (key === 'tokenInvalidMaybeVerified') {
+              Alert.alert(t('otp:errors.tokenInvalidTitle'), t(`otp:errors.${key}`));
+            } else {
+              showErrorToast(t('otp:errors.tokenInvalidTitle'), t(`otp:errors.${key}`));
+            }
             break;
+          }
           case 'otp_invalid':
           case 'otp_incorrect':
             setError(t('otp:errors.invalid'));
@@ -251,6 +284,7 @@ const OTPVerificationScreen: React.FC<OTPVerificationScreenProps> = ({
         }
       } finally {
         setLoading(false);
+        endSubmit(verifyingRef);
       }
     },
     // `purpose` / `isDeviceChange` must be listed: they now drive which request
@@ -261,6 +295,8 @@ const OTPVerificationScreen: React.FC<OTPVerificationScreenProps> = ({
 
   const handleResend = useCallback(async () => {
     if (!canResend || resending) return;
+    // ✅ Same-frame double tap = two codes, only the last one valid (finding 9).
+    if (!tryBeginSubmit(resendingRef)) return;
     setResending(true);
     setError('');
 
@@ -308,6 +344,7 @@ const OTPVerificationScreen: React.FC<OTPVerificationScreenProps> = ({
       }
     } finally {
       setResending(false);
+      endSubmit(resendingRef);
     }
   }, [canResend, resending, verification_token, purpose, showErrorToast, t]);
 

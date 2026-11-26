@@ -382,6 +382,8 @@ async function syncFollowDataToAPI(fromAdopt = false, expectedId: string | null 
       // Local is now ahead of the server — record it, so the next sync pushes
       // instead of the next download overwriting the follow.
       try { await AsyncStorage.setItem(SYNC_PENDING_KEY, '1'); } catch { /* silent */ }
+      // ✅ …and try again in this session (guest registration failed) — see scheduleFollowRetry.
+      scheduleFollowRetry();
       return;
     }
 
@@ -433,6 +435,13 @@ async function syncFollowDataToAPI(fromAdopt = false, expectedId: string | null 
     } catch {
       // If even the flag cannot be written we are no worse off than before.
     }
+    // ✅ The triggers above (next follow, foreground, network edge, launch)
+    // never fire for a fan who keeps the live map open on a network that
+    // stays "reachable" while the upload times out — the follow then never
+    // reached the server (no pushes) for the whole race. Retry on a timer too.
+    // Also covers follower_not_found below: the re-registered row is empty
+    // until this retry merges + uploads (audit 2026-11-26 #1).
+    scheduleFollowRetry();
     // The server no longer knows this follower id for this device (row gone or
     // re-assigned): retrying it would fail forever and the phone would never
     // take a download again. Forget the id — the next sync registers the
@@ -761,6 +770,8 @@ async function uploadCurrent(followerId: number, deviceId: string): Promise<void
       } catch {
         // A failure here only risks one redundant re-upload later. Harmless.
       }
+      // Delivered: the next failure starts the retry back-off from the start.
+      retryAttempt = 0;
       // Every local change (incl. unfollows) has reached the row: the
       // in-session unfollow guard is no longer needed — unless a merge is
       // running right now (its download may predate the unfollow).
@@ -896,6 +907,62 @@ export async function followBib(productAppId: number, bib: string): Promise<void
   }
 }
 
+// ✅ Which athlete (customer_app_id) a followed bib belongs to, per event:
+// { "<product_app_id>|<bib>": customer_app_id }. A bib follow is stored WITHOUT
+// its athlete (made while the row had no account, or from a screen without
+// one), so unfollowing the athlete elsewhere could not find it. Learned from
+// rows that carry both — the favourites list of an event (get_favourite_api
+// resolves bib → account), and event-screen toggles. Only links for bibs the
+// phone follows are kept, so it stays small. Device-local, never uploaded.
+const BIB_OWNERS_KEY = '@PFSLive:bibOwners';
+let bibOwnersChain: Promise<void> = Promise.resolve();   // one read-modify-write at a time
+
+async function readBibOwners(): Promise<Record<string, number>> {
+  try {
+    const v = JSON.parse((await AsyncStorage.getItem(BIB_OWNERS_KEY)) || '{}');
+    return v && typeof v === 'object' && !Array.isArray(v) ? v : {};
+  } catch { return {}; }
+}
+
+/** Remember bib → athlete links for one event (rows of get_favourite_api / event lists). */
+export function rememberBibOwners(
+  productAppId: number,
+  rows: Array<{ bib_number?: any; bib?: any; customer_app_id?: any }>,
+): Promise<void> {
+  const pid = toValidId(productAppId);
+  if (pid === null || !Array.isArray(rows)) return Promise.resolve();
+  const run = bibOwnersChain.then(async () => {
+    const bibs = await loadBibCache();
+    const followed = bibs.get(pid);
+    const owners = await readBibOwners();
+    let changed = false;
+    rows.forEach((r) => {
+      const b = toValidBib(r?.bib_number ?? r?.bib);
+      const cid = toValidId(r?.customer_app_id);
+      if (b === null || cid === null || !followed?.has(b)) return;
+      const k = `${pid}|${b}`;
+      if (owners[k] !== cid) { owners[k] = cid; changed = true; }
+    });
+    // Drop links of bibs no longer followed (any event).
+    Object.keys(owners).forEach((k) => {
+      const i = k.indexOf('|');
+      if (!bibs.get(Number(k.slice(0, i)))?.has(k.slice(i + 1))) { delete owners[k]; changed = true; }
+    });
+    if (changed) await AsyncStorage.setItem(BIB_OWNERS_KEY, JSON.stringify(owners));
+  }).catch(() => { /* best effort */ });
+  bibOwnersChain = run;
+  return run;
+}
+
+async function linkedBibsOf(customerId: number): Promise<Array<[number, string]>> {
+  await bibOwnersChain;
+  const owners = await readBibOwners();
+  return Object.entries(owners)
+    .filter(([, cid]) => Number(cid) === customerId)
+    .map(([k]) => [Number(k.slice(0, k.indexOf('|'))), k.slice(k.indexOf('|') + 1)] as [number, string])
+    .filter(([pid]) => toValidId(pid) !== null);
+}
+
 export async function unfollowUser(id: any): Promise<void> {
   const validId = toValidId(id);
   if (validId === null) {
@@ -923,7 +990,17 @@ export async function unfollowUser(id: any): Promise<void> {
       throw e;
     }
     await rememberRemovalIfUnadopted(validId);
-    
+    // ✅ Bib follows known to be this athlete's go too (see rememberBibOwners):
+    // unfollowing on the profile / athlete search / "Following" list used to
+    // leave an event bib follow behind — checkpoint pushes kept coming and the
+    // event star stayed lit (audit 2026-11-26 FN1). Best effort: the athlete
+    // unfollow above already stands.
+    try {
+      for (const [pid, b] of await linkedBibsOf(validId)) {
+        if (await isBibFollowed(pid, b)) await unfollowBib(pid, b);
+      }
+    } catch { /* the event screen's unfollow (smartUnfollow) still clears it */ }
+
     // ✅ Sync to API after successful local save — not awaited (see followUser).
     void syncFollowDataToAPI();
   } catch (error) {
@@ -1028,7 +1105,10 @@ export async function smartUnfollow(
     const customerFollowed = await isUserFollowed(validCustomerId);
     if (customerFollowed) {
       await unfollowUser(validCustomerId);
-      return;
+      // ✅ No early return: a bib follow of the same runner at this event
+      // (made while the row had no account yet) used to survive the unfollow —
+      // the star stayed lit after "Unfollowed" and the checkpoint pushes kept
+      // coming (the cron sends to bib followers too). Remove both (audit 2026-11-26 #4).
     }
   }
 
@@ -1078,6 +1158,57 @@ function installFollowRetry(): void {
 }
 installFollowRetry();
 
+// ✅ In-session retry timer (audit 2026-11-26 #1). The foreground / network-edge
+// triggers above miss the commonest race-day case: the app stays open, NetInfo
+// keeps saying "reachable", and the upload times out on a half-open socket.
+// Nothing retried until the user backgrounded the app — for that whole time the
+// follow existed only on the phone (no pushes, no counts, nothing on the web).
+// Back-off, one timer at a time; a failed retry schedules the next step, a
+// delivered upload resets it (uploadCurrent). Never a tight loop: a server that
+// keeps refusing (e.g. follower_not_found → re-register) waits each step out.
+let retryDelaysMs = [30000, 60000, 120000, 300000];
+let retryAttempt = 0;
+let retryTimer: ReturnType<typeof setTimeout> | null = null;
+// Which JS context armed the retry. A second context (a JS reload, a headless
+// task — or a test that reloads this module) must not retry with its own stale
+// in-memory lists over the live context's state: only the armer acts.
+const RETRY_ARMED_KEY = '@PFSLive:followRetryArmed';
+const retryOwner = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+
+/** Tests only: shorter back-off steps (ms). */
+export function setFollowRetryDelaysForTests(ms: number[]): void {
+  if (Array.isArray(ms) && ms.length > 0) retryDelaysMs = ms.slice();
+}
+
+function scheduleFollowRetry(): void {
+  if (retryTimer) return;
+  const delay = retryDelaysMs[Math.min(retryAttempt, retryDelaysMs.length - 1)];
+  retryAttempt++;
+  try { void AsyncStorage.setItem(RETRY_ARMED_KEY, retryOwner).catch(() => { /* best effort */ }); } catch { /* best effort */ }
+  try {
+    retryTimer = setTimeout(async () => {
+      retryTimer = null;
+      try {
+        if ((await AsyncStorage.getItem(RETRY_ARMED_KEY)) !== retryOwner) return;
+        if (await hasPendingFollowSync()) void syncFollowDataToAPI();
+        else retryAttempt = 0;
+      } catch { /* the next trigger retries */ }
+    }, delay);
+  } catch { retryTimer = null; }
+}
+
+/**
+ * ✅ A merge with the server row is owed (the language / fan-email screens just
+ * registered this device, or replaced a stale id): run the sync that does it
+ * NOW. Left for "the next follow / foreground / launch", the new row held none
+ * of the phone's follows — no pushes for them meanwhile (audit 2026-11-26 #8).
+ */
+export async function syncIfAdoptOwed(): Promise<void> {
+  try {
+    if ((await AsyncStorage.getItem(ADOPT_PENDING_KEY)) === '1') void syncFollowDataToAPI();
+  } catch { /* the next trigger merges */ }
+}
+
 /**
  * First-adoption merge: UNION of what the phone has and what the server row
  * has, saved locally and pushed back. Used only when the phone has just learned
@@ -1120,6 +1251,8 @@ async function runAdopt(prefetched?: ServerFollowData): Promise<void> {
             await AsyncStorage.setItem(ADOPT_PENDING_KEY, '1');
             await AsyncStorage.setItem(SYNC_PENDING_KEY, '1');
           } catch { /* silent */ }
+          // ✅ Retried in this session too (see scheduleFollowRetry).
+          scheduleFollowRetry();
           return;
         }
         server = {}; // the device has no row yet — nothing to merge in

@@ -9,7 +9,8 @@
     "hasSessionsLeft": "You have {{count}} sessions remaining. Upgrade anytime to get more.",
     "noSessionsLeft": "You've used all your sessions. Upgrade your plan to continue tracking.",
     "webMembership": "You have an active web membership. Manage it from the website.",
-    "grace": "Your payment is being processed. Access will resume shortly."
+    "grace": "Your payment is being processed. Access will resume shortly.",
+    "paymentPending": "Your payment has been received and your purchase is being activated. This usually takes a few minutes."
   },
   "sessions": {
     "unlimited": "Unlimited",
@@ -107,6 +108,39 @@
     "successTitle": "You're all set!",
     "successBody": "Your membership is active. Enjoy tracking your athletes!",
     "errorTitle": "Something went wrong",
-    "errorBody": "We could not verify your purchase. Please try again or contact support."
+    "errorBody": "We could not verify your purchase. Please try again or contact support.",
+    "unconfirmedBody": "Apple has received your payment, but we could not confirm it yet. Do not buy again: we keep retrying automatically and your purchase will be added to your account. If it does not appear within a day, contact info@liviolive.com.",
+    "otherAccountBody": "This subscription belongs to another Livio account. Log in with that account, or contact info@liviolive.com.",
+    "creditedOtherBody": "This purchase was made from another Livio account and has been added to that account."
+  },
+  "restorePending": {
+    "title": "Purchase being activated",
+    "message": "We found your purchase. It is being activated and will show up in your profile within a few minutes."
+  },
+  "restoreOtherAccount": {
+    "title": "Linked to another account",
+    "message": "This subscription belongs to another Livio account. Log in with that account, or contact info@liviolive.com."
+  },
+  "unconfirmed": {
+    "title": "Payment still being confirmed",
+    "message": "Apple has received a payment from you that we are still confirming. Please wait until it is added to your account before buying another one.",
+    "banner": "We are still confirming a payment Apple received from you. You don't need to buy again.",
+    "retry": "Check again now",
+    "retryDoneTitle": "Payment confirmed",
+    "retryDoneMessage": "Your payment has been confirmed and added to your account.",
+    "retryStillTitle": "Still being confirmed",
+    "retryStillMessage": "We could not confirm your payment yet. We keep trying automatically - you don't need to buy again."
+  },
+  "paymentPending": {
+    "title": "Purchase being activated",
+    "message": "Your previous purchase is still being activated. Please wait a few minutes before buying again."
+  },
+  "pendingApproval": {
+    "title": "Waiting for approval",
+    "message": "Your purchase is waiting for approval (for example Ask to Buy). You have not been charged yet. It will be added once it is approved."
+  },
+  "restoreCreditedOther": {
+    "title": "Added to another account",
+    "message": "This purchase was made from another Livio account and has been added to that account."
   }
 }

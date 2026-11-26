@@ -19,10 +19,30 @@ import {
 } from "../services/appleverifyservice";
 import {
   processPurchase,
+  selectRecoverable,
   selectRestorable,
-  selectUnfinishedConsumables,
   tryBeginPurchase,
+  verifyWithRetry,
+  isTransientVerifyError,
+  isQueuedAction,
+  restoreOutcome,
+  isUserInitiatedEvent,
+  validAppAccountToken,
+  openPaidConsumables,
+  type PurchaseFlowResult,
 } from "./iapPurchaseFlow";
+import {
+  iapShared,
+  markPlansScreenMounted,
+  loadConfirmedTxns,
+  rememberConfirmedTxn,
+  loadUnconfirmedTxns,
+  setUnconfirmedTxn,
+  loadPermanentFailTxns,
+  rememberPermanentFailTxn,
+  onRecoveryCredited,
+} from "../services/appleIapRecovery";
+import { AppState } from "react-native";
 import { analyticsService, SubscriptionState } from "../services/analyticsService";
 
 export type PlanId = "lite" | "basic" | "pro";
@@ -30,7 +50,42 @@ export type PlanId = "lite" | "basic" | "pro";
 export const PLAN_IDS: PlanId[] = ["lite", "basic", "pro"];
 
 // ✅ Restore result type
-export type RestoreResult = "success" | "none" | null;
+// 'pending' / 'error' / 'other_account' added by the payments audit
+// 2026-11-26 (#3, #11): Restore used to answer "nothing to restore" for a
+// purchase it had just credited (the cron writes the membership later), for a
+// verify that failed, and for a subscription bound to another account.
+export type RestoreResult =
+  | "success"
+  | "none"
+  | "pending"
+  | "error"
+  | "other_account"
+  | "credited_other_account" // re-audit PN7
+  | null;
+
+// ✅ purchaseError value for "Apple charged, our server has not confirmed it"
+// (audit #2). The screen shows its own copy for it - never "please try again",
+// which is what bought the second activation.
+export const PURCHASE_UNCONFIRMED = "purchase_unconfirmed";
+export const PURCHASE_OTHER_ACCOUNT = "subscription_linked_to_other_account";
+// The server credited the account the purchase was made FOR, not this one (PN7).
+export const PURCHASE_CREDITED_OTHER = "credited_other_account";
+
+// In-place retries of the verify call after a user-initiated purchase (#2).
+const VERIFY_RETRY_DELAYS_MS = [2000, 5000];
+// ...within ONE deadline for all attempts (re-audit PN8): the processing modal
+// cannot be dismissed, and three 45 s calls kept the user there ~142 s.
+const VERIFY_DEADLINE_MS = 40000;
+// While a paid purchase is being activated, re-read the plans this often so
+// the block lifts once the cron has run (re-audit PN4).
+const PENDING_POLL_MS = 60000;
+// openiap answered requestPurchase with nothing and no event followed (Ask to
+// Buy / pending): release the one-purchase gate after this long (#8).
+const PENDING_RELEASE_MS = 20000;
+// StoreKit never connected: stop the full-screen spinner after this long (#9).
+const PRICE_WAIT_MS = 10000;
+
+const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
 interface UseMembershipPlansResult {
   plansData: MembershipPlansData | null;
@@ -63,6 +118,21 @@ interface UseMembershipPlansResult {
   restoreError: string | null;
   resetRestore: () => void;
   purchaseButtonLoading: boolean;
+  // ✅ Payments audit 2026-11-26
+  /** An activation Apple charged that our server has not confirmed yet (#2). */
+  unconfirmedPayment: boolean;
+  /** Re-run the verify of what StoreKit still holds (the banner's button).
+   *  Resolves true while a payment is STILL unconfirmed afterwards (PN6). */
+  retryUnconfirmed: () => Promise<boolean>;
+  /** The banner's retry is running (PN6). */
+  retryingUnconfirmed: boolean;
+  /** StoreKit not asked yet whether a paid activation is still open (PN1). */
+  checkingStore: boolean;
+  /** Paid and confirmed, the cron has not activated it yet (#4). */
+  paymentPending: boolean;
+  /** StoreKit is waiting for approval (Ask to Buy / deferred payment) (#8). */
+  purchasePendingApproval: boolean;
+  resetPendingApproval: () => void;
 }
 
 export function useMembershipPlans(): UseMembershipPlansResult {
@@ -81,6 +151,37 @@ export function useMembershipPlans(): UseMembershipPlansResult {
 
   const [purchaseButtonLoading, setPurchaseButtonLoading] = useState(false);
 
+  // ✅ Payments audit 2026-11-26 state
+  const [unconfirmedPayment, setUnconfirmedPayment] = useState(false);
+  const [purchasePendingApproval, setPurchasePendingApproval] = useState(false);
+  // Consumables Apple charged whose verify has not succeeded yet. A Set, so
+  // a later successful verify of exactly that transaction clears the block.
+  const unconfirmedIdsRef = useRef<Set<string>>(new Set());
+  // ✅ Persisted too (re-audit PN1, shared with the app-level pass): in memory
+  // only, the block was gone after leaving the screen or a restart.
+  const markUnconfirmed = useCallback((id: string | null, on: boolean) => {
+    if (!id) return;
+    if (on) unconfirmedIdsRef.current.add(id);
+    else unconfirmedIdsRef.current.delete(id);
+    setUnconfirmedPayment(unconfirmedIdsRef.current.size > 0);
+    void setUnconfirmedTxn(id, on);
+  }, []);
+  // ✅ Until StoreKit has been asked whether it still holds a paid, uncredited
+  // activation, the activation is not sold (PN1). iOS only (no IAP elsewhere).
+  const [checkingStore, setCheckingStore] = useState<boolean>(Platform.OS === "ios");
+  const [retryingUnconfirmed, setRetryingUnconfirmed] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    loadUnconfirmedTxns().then((ids) => {
+      if (!alive || ids.size === 0) return;
+      ids.forEach((id) => unconfirmedIdsRef.current.add(id));
+      setUnconfirmedPayment(true);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
   const {
     connected,
     products,
@@ -92,15 +193,30 @@ export function useMembershipPlans(): UseMembershipPlansResult {
     {},
   );
   const [loadingPrices, setLoadingPrices] = useState<boolean>(true);
-  const processedTransactions = useRef<Set<string>>(new Set());
-  const processingRef = useRef<Set<string>>(new Set());
+  // ✅ Shared with the app-level recovery pass (services/appleIapRecovery,
+  // audit #7), so the two can never verify the same transaction at once.
+  const processedTransactions = useRef<Set<string>>(iapShared.processed);
+  const processingRef = useRef<Set<string>>(iapShared.processing);
   const awaitingPurchaseRef = useRef(false);
   // Armed ONLY by requestPurchase, never by restorePurchases, so the error
   // listener can tell a failed purchase (owns purchaseError) from a failed
   // restore (owns restoreError) — awaitingPurchaseRef is armed by both.
   const purchaseIntentRef = useRef(false);
+  // ✅ The SKU the user is buying right now (audit #14): only a listener
+  // event for THIS product is the user's purchase.
+  const pendingSkuRef = useRef<string | null>(null);
+  // Bumped on every purchase start, so a stale pending-release timer (#8)
+  // can never open the gate of a LATER purchase.
+  const purchaseSeqRef = useRef(0);
+  const restoreRunningRef = useRef(false);
+  // apple_get_plans' appAccountToken for this account (#5), null on an older server.
+  const appAccountTokenRef = useRef<string | null>(null);
 
   console.log("🚀 useMembershipPlans mounted");
+
+  // ✅ Tell the app-level recovery pass that this screen owns the StoreKit
+  // connection while mounted (useIAP's endConnection is global).
+  useEffect(() => markPlansScreenMounted(), []);
 
   const resetPurchase = useCallback(() => {
     setPurchaseError(null);
@@ -115,13 +231,20 @@ export function useMembershipPlans(): UseMembershipPlansResult {
     setRestoreLoading(false);
   }, []);
 
+  const resetPendingApproval = useCallback(() => setPurchasePendingApproval(false), []);
+
   // ── Load plans from backend ──
-  const loadPlans = useCallback(async () => {
+  // `silent` (re-audit PN4/PN5): a background refresh - no full-screen spinner,
+  // and a failure keeps the plans already shown instead of an error screen.
+  const loadPlans = useCallback(async (silent: boolean = false) => {
     try {
-      setLoadingPlans(true);
-      setPlansError(null);
+      if (!silent) {
+        setLoadingPlans(true);
+        setPlansError(null);
+      }
       const data = await membershipPlanService.getApplePlans();
       setPlansData(data);
+      appAccountTokenRef.current = validAppAccountToken(data?.app_account_token);
 
       // Synced HERE rather than in MembershipPlansScreen so it also covers the
       // restore path and refetchPlans — restorePurchases() calls loadPlans() to
@@ -144,11 +267,11 @@ export function useMembershipPlans(): UseMembershipPlansResult {
       }
       return data; // ✅ return so restore can check entitlement immediately
     } catch (error: any) {
-      setPlansError(error?.message || "Failed to load membership plans");
+      if (!silent) setPlansError(error?.message || "Failed to load membership plans");
       console.error("❌ Error loading membership plans:", error);
       return null;
     } finally {
-      setLoadingPlans(false);
+      if (!silent) setLoadingPlans(false);
     }
   }, []);
 
@@ -245,6 +368,26 @@ export function useMembershipPlans(): UseMembershipPlansResult {
     loadPrices();
   }, [connected, productSkus, subSkus, inAppSkus, fetchProducts]);
 
+  // ✅ The price spinner can never block the screen for good (audit #9). It
+  // was cleared only by the price fetch above, which needs a StoreKit
+  // connection AND a catalog: with initConnection failing, or a plans request
+  // that failed / came back empty, the whole screen spun forever - Restore and
+  // the plans error's Retry button included.
+  useEffect(() => {
+    if (!loadingPlans && productSkus.length === 0) setLoadingPrices(false);
+  }, [loadingPlans, productSkus]);
+  useEffect(() => {
+    const t = setTimeout(() => setLoadingPrices(false), PRICE_WAIT_MS);
+    return () => clearTimeout(t);
+  }, []);
+
+  const releasePurchaseGate = useCallback(() => {
+    awaitingPurchaseRef.current = false;
+    purchaseIntentRef.current = false;
+    pendingSkuRef.current = null;
+    setPurchaseButtonLoading(false);
+  }, []);
+
   const requestPurchase = useCallback(
     async (params: Parameters<typeof rawRequestPurchase>[0]) => {
       // ✅ ONE purchase at a time (support 2026-11-26). A second tap while the
@@ -261,17 +404,51 @@ export function useMembershipPlans(): UseMembershipPlansResult {
         return null;
       }
       awaitingPurchaseRef.current = true; // arm it — a real purchase attempt is starting
+      const seq = ++purchaseSeqRef.current;
       setPurchaseButtonLoading(true);
+      setPurchasePendingApproval(false);
+
+      // ✅ appAccountToken (audit #5): the server can then credit the account
+      // the purchase was made FOR, even when a later recovery runs under
+      // somebody else's login on this phone. Plain JS -> the native decoder
+      // already reads it (openiap RequestPurchaseIosProps), no rebuild needed.
+      // No token from the server = exactly the old request.
+      const apple = (params as any)?.request?.apple;
+      pendingSkuRef.current = apple?.sku ?? null;
+      const token = appAccountTokenRef.current;
+      const finalParams =
+        token && apple
+          ? ({
+              ...params,
+              request: { ...(params as any).request, apple: { ...apple, appAccountToken: token } },
+            } as typeof params)
+          : params;
+
       try {
-        return await rawRequestPurchase(params);
+        const result: any = await rawRequestPurchase(finalParams);
+        // ✅ Nothing back and (so far) no event (audit #8): openiap returns
+        // nil for a pending StoreKit result (Ask to Buy). Neither listener
+        // fires then, and the gate + spinner stayed on until the screen was
+        // left. Wait a while for a late event, then release - and say why.
+        const empty = result == null || (Array.isArray(result) && result.length === 0);
+        if (empty) {
+          setTimeout(() => {
+            if (purchaseSeqRef.current !== seq || !purchaseIntentRef.current) return;
+            console.log("⏸ No purchase event after requestPurchase - treating as pending approval");
+            releasePurchaseGate();
+            setPurchasePendingApproval(true);
+          }, PENDING_RELEASE_MS);
+        }
+        return result;
       } catch (err) {
         awaitingPurchaseRef.current = false; // disarm if the call itself throws
         purchaseIntentRef.current = false;
+        pendingSkuRef.current = null;
         setPurchaseButtonLoading(false);
         throw err;
       }
     },
-    [rawRequestPurchase],
+    [rawRequestPurchase, releasePurchaseGate],
   );
 
   // ── One verify path for every Apple transaction ──
@@ -284,8 +461,14 @@ export function useMembershipPlans(): UseMembershipPlansResult {
   // Stable: it reads refs and setters only, so the once-registered listener
   // can close over it.
   const handlePurchase = useCallback(
-    async (purchase: any, userInitiated: boolean): Promise<boolean> => {
+    async (
+      purchase: any,
+      userInitiated: boolean,
+    ): Promise<PurchaseFlowResult<VerifyPurchaseResponse>> => {
       if (userInitiated) {
+        // The purchase event arrived: the pending-approval timer (#8) of this
+        // purchase must not release the gate while we verify.
+        purchaseSeqRef.current++;
         setPurchaseLoading(true);
         setPurchaseError(null);
         setPurchaseResult(null);
@@ -296,37 +479,69 @@ export function useMembershipPlans(): UseMembershipPlansResult {
           resolveConsumable,
           processed: processedTransactions.current,
           processing: processingRef.current,
-          verify: (id) => appleVerifyService.verifyPurchase(id),
+          // ✅ The user just paid: retry a transient failure in place before
+          // anything is shown (audit #2).
+          verify: (id) =>
+            userInitiated
+              ? verifyWithRetry(() => appleVerifyService.verifyPurchase(id), VERIFY_RETRY_DELAYS_MS, sleep, {
+                  deadlineMs: VERIFY_DEADLINE_MS, // PN8: one cap for all attempts
+                })
+              : appleVerifyService.verifyPurchase(id),
           finish: (p, isConsumable) =>
             finishTransaction({ purchase: p as any, isConsumable }),
           log: console.log,
         });
 
         if (flow.outcome === "verified") {
+          markUnconfirmed(flow.transactionId, false);
+          // Subscription periods are remembered so the automatic pass does not
+          // re-verify them on every visit (selectRecoverable).
+          if (flow.isConsumable === false) void rememberConfirmedTxn(flow.transactionId);
           if (userInitiated) {
-            setPurchaseResult(flow.result ?? null); // drives navigation
+            if (flow.result?.action === PURCHASE_CREDITED_OTHER) {
+              // PN7: not THIS account's purchase - say so, do not navigate as a success.
+              setPurchaseError(PURCHASE_CREDITED_OTHER);
+            } else {
+              setPurchaseResult(flow.result ?? null); // drives navigation
+            }
           } else {
             console.log("✅ Background-reconciled prior purchase:", flow.transactionId);
           }
-          return true;
+          return flow;
         }
         // NOT finished on verify_failed: the transaction stays in StoreKit's
         // unfinished queue, so the next recovery pass (next visit to this
-        // screen) retries it.
-        if (flow.outcome === "verify_failed" && userInitiated) {
+        // screen, or the app-level pass) retries it.
+        if (flow.outcome === "verify_failed") {
           const err: any = flow.error;
-          setPurchaseError(err?.message || "Verification failed");
+          const code = String(err?.code ?? err?.message ?? "");
+          // ✅ A charged activation that is not confirmed blocks buying another
+          // (audit #2) - only for failures a retry can fix.
+          if (flow.isConsumable === true && isTransientVerifyError(err)) {
+            markUnconfirmed(flow.transactionId, true);
+          }
+          // ✅ A final refusal is remembered and not re-verified by every
+          // automatic pass (re-audit PN3); it is not a payment we are confirming.
+          if (!isTransientVerifyError(err)) {
+            void rememberPermanentFailTxn(flow.transactionId);
+            markUnconfirmed(flow.transactionId, false);
+          }
+          if (userInitiated) {
+            // Never the raw code, never "try again": Apple has charged.
+            setPurchaseError(code === PURCHASE_OTHER_ACCOUNT ? PURCHASE_OTHER_ACCOUNT : PURCHASE_UNCONFIRMED);
+          }
         }
-        return false;
+        return flow;
       } finally {
         if (userInitiated) {
           setPurchaseLoading(false);
           awaitingPurchaseRef.current = false;
           purchaseIntentRef.current = false;
+          pendingSkuRef.current = null;
         }
       }
     },
-    [resolveConsumable],
+    [resolveConsumable, markUnconfirmed],
   );
 
   // ✅ ── Recover paid-but-never-verified transactions (support 2026-11-26) ──
@@ -347,29 +562,98 @@ export function useMembershipPlans(): UseMembershipPlansResult {
   // unfinished (no SK2ConsumableTransactionHistory key in this app), and we
   // finish one only after the backend verified it - so whatever is there is
   // paid and not yet credited. The backend is idempotent (APPLE_VERIFY DUP).
+  //
+  // ✅ Audit 2026-11-26 #1: plus every running SUBSCRIPTION period this device
+  // has not had confirmed yet (selectRecoverable). A subscription whose verify
+  // failed was charged and never credited - the SUBSCRIBED webhook defers to
+  // this verify call and cannot even find the customer until one has run.
+  // The same pass also runs app-wide (services/appleIapRecovery, #7).
+  const runRecoveryPass = useCallback(async () => {
+    const all = await getStorePurchases({ onlyIncludeActiveItemsIOS: false });
+    // An unconfirmed activation that is no longer in Transaction.all was
+    // finished - i.e. verified, e.g. by the app-level pass meanwhile: lift the block.
+    const permanent = await loadPermanentFailTxns();
+    const open = openPaidConsumables(all, resolveConsumable, permanent);
+    const stillOpen = new Set(open);
+    [...unconfirmedIdsRef.current].forEach((id) => {
+      if (!stillOpen.has(id)) markUnconfirmed(id, false);
+    });
+    // ✅ Every paid activation StoreKit still holds unfinished is unconfirmed
+    // until its verify succeeds (re-audit PN1) - read from StoreKit itself, so
+    // the block survives leaving the screen and a restart.
+    open.forEach((id) => markUnconfirmed(id, true));
+    setCheckingStore(false);
+    const confirmed = await loadConfirmedTxns();
+    const todo = selectRecoverable(all, resolveConsumable, Date.now(), confirmed, permanent);
+    if (todo.length === 0) return;
+    console.log("🔁 Recovering unverified transactions:", todo.length);
+    let credited = false;
+    for (const purchase of todo) {
+      const flow = await handlePurchase(purchase, false);
+      if (flow.outcome === "verified") credited = true;
+    }
+    // Show the activation the backend just granted.
+    if (credited) await loadPlans(true);
+  }, [resolveConsumable, handlePurchase, loadPlans, markUnconfirmed]);
+
   const recoveryDoneRef = useRef(false);
   useEffect(() => {
     if (Platform.OS !== "ios") return;
-    if (!connected || inAppSkus.length === 0 || recoveryDoneRef.current) return;
+    if (!connected || productSkus.length === 0 || recoveryDoneRef.current) return;
     recoveryDoneRef.current = true;
 
     (async () => {
       try {
-        const all = await getStorePurchases({ onlyIncludeActiveItemsIOS: false });
-        const unfinished = selectUnfinishedConsumables(all, resolveConsumable);
-        if (unfinished.length === 0) return;
-        console.log("🔁 Recovering unfinished consumables:", unfinished.length);
-        let credited = false;
-        for (const purchase of unfinished) {
-          if (await handlePurchase(purchase, false)) credited = true;
-        }
-        // Show the activation the backend just granted.
-        if (credited) await loadPlans();
+        await runRecoveryPass();
       } catch (error: any) {
         console.warn("⚠️ Unfinished-transaction recovery failed:", error?.message);
+      } finally {
+        setCheckingStore(false); // persisted unconfirmed ids still block (PN1)
       }
     })();
-  }, [connected, inAppSkus, resolveConsumable, handlePurchase, loadPlans]);
+  }, [connected, productSkus, runRecoveryPass]);
+
+  // StoreKit never connected: stop "checking" after a while; without a
+  // connection a purchase cannot start anyway (PN1).
+  useEffect(() => {
+    const t = setTimeout(() => setCheckingStore(false), 15000);
+    return () => clearTimeout(t);
+  }, []);
+
+  // The "we're confirming your payment" banner's button: one more pass now.
+  // ✅ With a loading state and an answer (re-audit PN6): it did nothing
+  // visible. Resolves true while a payment is still unconfirmed.
+  const retryUnconfirmed = useCallback(async () => {
+    setRetryingUnconfirmed(true);
+    try {
+      await runRecoveryPass();
+    } catch (error: any) {
+      console.warn("⚠️ Retry of unconfirmed payment failed:", error?.message);
+    } finally {
+      setRetryingUnconfirmed(false);
+    }
+    return unconfirmedIdsRef.current.size > 0;
+  }, [runRecoveryPass]);
+
+  // ✅ Keep payment_pending fresh (re-audit PN4): it was read once per load,
+  // so a user who stayed on the screen stayed blocked after the cron had run.
+  // Silent re-read on return to the foreground, and every minute while pending.
+  const paymentPendingNow = plansData?.entitlement?.payment_pending === true;
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (s) => {
+      if (s === "active") void loadPlans(true);
+    });
+    return () => sub.remove();
+  }, [loadPlans]);
+  useEffect(() => {
+    if (!paymentPendingNow) return;
+    const t = setInterval(() => void loadPlans(true), PENDING_POLL_MS);
+    return () => clearInterval(t);
+  }, [paymentPendingNow, loadPlans]);
+
+  // ✅ A background pass that began before this screen opened credited
+  // something (re-audit PN5): show it.
+  useEffect(() => onRecoveryCredited(() => void loadPlans(true)), [loadPlans]);
 
   // ✅ ── Restore Purchases (Apple Guideline 3.1.1) ──
   // Reads StoreKit's transactions and verifies each one HERE, then reloads
@@ -380,6 +664,11 @@ export function useMembershipPlans(): UseMembershipPlansResult {
   // onlyIncludeActiveItemsIOS true, never returns a consumable - so Restore
   // verified nothing and could not recover an activation.
   const restorePurchases = useCallback(async () => {
+    // ✅ Not during a purchase (audit #15): Restore could take the just-bought
+    // transaction first, and the user's purchase then ended with no result,
+    // no error and no navigation. And not twice at once (two taps, one frame).
+    if (purchaseIntentRef.current || restoreRunningRef.current) return;
+    restoreRunningRef.current = true;
     try {
       setRestoreLoading(true);
       setRestoreError(null);
@@ -394,8 +683,20 @@ export function useMembershipPlans(): UseMembershipPlansResult {
       // answers an expired one with 'expired' anyway.
       const all = await getStorePurchases({ onlyIncludeActiveItemsIOS: false });
       const toVerify = selectRestorable(all, resolveConsumable, Date.now());
+      let queued = 0;
+      let failed = 0;
+      let otherAccount = 0;
+      let creditedOther = 0;
       for (const purchase of toVerify) {
-        await handlePurchase(purchase, false);
+        const flow = await handlePurchase(purchase, false);
+        if (flow.outcome === "verified" && isQueuedAction(flow.result?.action)) queued++;
+        // PN7: credited to the account it was bought FOR, not this one
+        if (flow.outcome === "verified" && flow.result?.action === PURCHASE_CREDITED_OTHER) creditedOther++;
+        if (flow.outcome === "verify_failed") {
+          const err: any = flow.error;
+          if (String(err?.code ?? err?.message ?? "") === PURCHASE_OTHER_ACCOUNT) otherAccount++;
+          else failed++;
+        }
       }
 
       // Reload entitlement from backend (source of truth).
@@ -405,17 +706,27 @@ export function useMembershipPlans(): UseMembershipPlansResult {
         data?.entitlement?.has_membership === true &&
         data?.entitlement?.status === "active";
 
-      const outcome = hasActive ? "success" : "none";
+      const outcome = restoreOutcome({
+        hasActive,
+        queued,
+        failed,
+        otherAccount,
+        paymentPending: data?.entitlement?.payment_pending === true,
+        creditedOther,
+      });
       // The none/success ratio is the useful number here: "restore found
       // nothing" is a common paid-app complaint and is otherwise invisible
       // unless someone files a support ticket.
-      void analyticsService.logRestorePurchases(outcome);
+      void analyticsService.logRestorePurchases(
+        outcome === "success" || outcome === "pending" ? "success" : outcome === "none" ? "none" : "error",
+      );
       setRestoreResult(outcome);
     } catch (error: any) {
       void analyticsService.logRestorePurchases("error");
       setRestoreError(error?.message || "Restore failed");
     } finally {
       setRestoreLoading(false);
+      restoreRunningRef.current = false;
       // Restore no longer arms awaitingPurchaseRef, so it must not clear it
       // either: clearing it during a purchase made that purchase's result
       // look non-user-initiated and left the one-purchase gate closed.
@@ -443,13 +754,19 @@ export function useMembershipPlans(): UseMembershipPlansResult {
 
   // ── Purchase listener — fires after Apple confirms a purchase ──
   // The work is in handlePurchase above (shared with recovery and Restore).
+  // ✅ User-initiated only when it is the product being bought (audit #14).
   useEffect(() => {
     const subscription = purchaseUpdatedListener((purchase: any) => {
-      void handlePurchase(purchase, awaitingPurchaseRef.current);
+      const userInitiated = isUserInitiatedEvent(awaitingPurchaseRef.current, pendingSkuRef.current, purchase);
+      void handlePurchase(purchase, userInitiated).then((flow) => {
+        // ✅ A purchase arriving on its own (Ask to Buy approved while the
+        // screen is open) was verified but never shown (re-audit PN5).
+        if (!userInitiated && flow.outcome === "verified") void loadPlans(true);
+      });
     });
 
     return () => subscription.remove();
-  }, [handlePurchase]);
+  }, [handlePurchase, loadPlans]);
 
   // ── Purchase ERROR listener — the other half of the purchase lifecycle ──
   // expo-iap does NOT reject requestPurchase when the user dismisses the Apple
@@ -469,9 +786,18 @@ export function useMembershipPlans(): UseMembershipPlansResult {
       if (!purchaseIntentRef.current) return;
       purchaseIntentRef.current = false;
       awaitingPurchaseRef.current = false;
+      pendingSkuRef.current = null;
 
       if (error?.code === ErrorCode.UserCancelled) {
         console.log("ℹ️ User cancelled purchase - no action needed");
+        return;
+      }
+
+      // ✅ Ask to Buy / deferred payment is not a failure (audit #8): nothing
+      // is charged yet, the purchase arrives later if approved.
+      if (error?.code === ErrorCode.DeferredPayment) {
+        console.log("⏸ Purchase awaiting approval (deferred payment)");
+        setPurchasePendingApproval(true);
         return;
       }
 
@@ -548,5 +874,13 @@ export function useMembershipPlans(): UseMembershipPlansResult {
     restoreError,
     resetRestore,
     purchaseButtonLoading,
+    // ✅ Payments audit 2026-11-26
+    unconfirmedPayment,
+    retryUnconfirmed,
+    paymentPending: plansData?.entitlement?.payment_pending === true,
+    retryingUnconfirmed,
+    checkingStore,
+    purchasePendingApproval,
+    resetPendingApproval,
   };
 }

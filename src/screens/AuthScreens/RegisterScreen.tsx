@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -26,6 +26,8 @@ import { toastError, toastSuccess } from '../../../utils/toast';
 import { useAuthForm } from '../../hooks/useAuthForm';
 import { API_CONFIG } from '../../constants/config';
 import { analyticsService } from '../../services/analyticsService';
+import { tryBeginSubmit, endSubmit } from '../../services/authFlowGuards';
+import { pendingOtpService } from '../../services/pendingOtpService';
 import { useDimensions } from '../../hooks/useDimensions';
 import { useLandscapeSidePadding } from '../../hooks/useLandscapeSidePadding';
 import { Button } from '../../components/ui';
@@ -267,8 +269,25 @@ const RegisterScreen: React.FC<RegisterProps> = ({ navigation }) => {
     [setField]
   );
 
+  // ✅ One registration request at a time (audit 2026-11-26, finding 8). Two
+  // taps in the same frame both passed `loading`; the second request deleted the
+  // first one's unverified row server-side, and if the first answer arrived last
+  // the OTP screen held a token that no longer existed.
+  const submittingRef = useRef(false);
+
   // ✅ HANDLE SUBMIT
-  const handleSubmit = useCallback(async () => {
+  // Plain function (was useCallback): it reads this render's form, and nothing
+  // memoises on its identity. The gate lives in a ref, so it survives re-renders.
+  const handleSubmit = async () => {
+    if (!tryBeginSubmit(submittingRef)) return;
+    try {
+      await submitRegistration();
+    } finally {
+      endSubmit(submittingRef);
+    }
+  };
+
+  const submitRegistration = async () => {
     clearAllErrors();
 
     const validationErrors = validateRegisterForm(
@@ -321,6 +340,14 @@ const RegisterScreen: React.FC<RegisterProps> = ({ navigation }) => {
         toastSuccess(
           t('register:success'),
           t('register:welcome', { name: formData.firstname })
+        );
+
+        // ✅ Kept on disk so the code can still be entered after the app is
+        // killed on the OTP screen: Login reopens it on email_not_verified
+        // (audit 2026-11-26, finding 3).
+        await pendingOtpService.save(
+          response.data.email || formData.email,
+          response.data.verification_token,
         );
 
         navigation.navigate('OTPVerificationScreen', {
@@ -381,7 +408,7 @@ const RegisterScreen: React.FC<RegisterProps> = ({ navigation }) => {
     } finally {
       setLoading(false);
     }
-  }, [formData, clearAllErrors, setErrors, applyApiFieldErrors, navigation, t]);
+  };
 
   return (
     <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['left','right'] : ['bottom']}>

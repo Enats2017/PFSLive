@@ -69,7 +69,9 @@
     "confirmMessage": "\"{{name}}\" sera supprimé définitivement. Cette action est irréversible.",
     "cancel": "Annuler",
     "confirm": "Supprimer",
-    "trackingStartedError": "Cet événement ne peut plus être supprimé, car le suivi a déjà commencé."
+    "trackingStartedError": "Cet événement ne peut plus être supprimé, car le suivi a déjà commencé.",
+    "trackingNowError": "Vous suivez cet événement en ce moment. Arrêtez d'abord le suivi, puis supprimez-le.",
+    "trackingRecentError": "Cet événement a été suivi il y a quelques minutes. Réessayez dans quelques minutes."
   },
   "events": {
     "viewResult": "Voir le résultat"

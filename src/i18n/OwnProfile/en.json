@@ -69,7 +69,9 @@
     "confirmMessage": "\"{{name}}\" will be permanently removed. This can't be undone.",
     "cancel": "Cancel",
     "confirm": "Delete",
-    "trackingStartedError": "This event can no longer be deleted because tracking has already started."
+    "trackingStartedError": "This event can no longer be deleted because tracking has already started.",
+    "trackingNowError": "You are tracking this event right now. Stop tracking first, then delete it.",
+    "trackingRecentError": "This event was tracked a few minutes ago. Try again in a few minutes."
   },
   "events": {
     "viewResult": "View result"

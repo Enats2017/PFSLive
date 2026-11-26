@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import { tokenService } from '../services/tokenService';
 import {
@@ -14,6 +14,10 @@ import {
 } from '../hooks/usePendingRegistration';
 import { useAuth } from '../context/AuthContext'; // ✅ NEW
 import { analyticsService } from './analyticsService';
+import {
+  classifyCallError,
+  isRegisteredOutcome,
+} from '../screens/EventDetails/registrationFlow';
 
 interface UseRegistrationHandlerReturn {
   modalVisible: boolean;
@@ -77,6 +81,15 @@ const useRegistrationHandler = (
   const [liveTrackingItem, setLiveTrackingItem] = useState<Distance | null>(null);
   const [registeringItemId, setRegisteringItemId] = useState<number | null>(null);
 
+  // ✅ One register / confirm / unregister call at a time (audit 2026-11-26, L2).
+  // The registerLoading checks read the value of the render the handler was
+  // created in, and handleRegister awaits the token BEFORE callRegisterAPI sets
+  // it - so two triggers in that window (a tap and the auto-register effect, a
+  // double tap) both passed. A ref is set synchronously and seen by every
+  // closure. The server now also refuses a second concurrent write
+  // (RegistrationGuard), this keeps the app from sending one.
+  const inFlightRef = useRef(false);
+
   const isTokenValid = async (): Promise<boolean> => {
     try {
       const token = await tokenService.getToken();
@@ -126,17 +139,27 @@ const useRegistrationHandler = (
   // ✅ NEW: HANDLE UNAUTHORIZED — clears token and swaps navigator cleanly
   // Replaces all navigation.navigate('LoginScreen') calls.
   // logout() unmounts auth-required screens and mounts auth screens — no history.
-  const handleUnauthorized = useCallback(async () => {
+  //
+  // ✅ `keepDistanceId`: the Connect to resume after the login, saved AFTER the
+  // logout (audit 2026-11-26, H2) - logout clears any pending Connect, so a
+  // runner who logs out cannot have it replayed on the next account's login;
+  // saved before it, this one would be wiped too.
+  const handleUnauthorized = useCallback(async (keepDistanceId?: number) => {
     await tokenService.removeToken();
-    logout();
+    await logout();
+    if (keepDistanceId !== undefined) {
+      await savePendingRegistration(product_app_id, keepDistanceId, event_name);
+    }
     setTimeout(() => {
       navigation.reset({ index: 0, routes: [{ name: 'LoginScreen' }] });
     }, 50);
-  }, [logout]);
+  }, [logout, product_app_id, event_name]);
 
   const callRegisterAPI = useCallback(
     async (item: Distance, showConfirmPopup?: boolean) => {
       if (registerLoading) return;
+      if (inFlightRef.current) return;
+      inFlightRef.current = true;
 
       try {
         setRegisterLoading(true);
@@ -179,6 +202,22 @@ const useRegistrationHandler = (
             case 'already_registered':
               setSelectedItem({ ...item, registration_status: 'registered' });
               setModalVisible(true);
+              // ✅ The registration IS on the server (audit M2) - usually an
+              // earlier request that timed out after the insert. The card kept
+              // its Connect button (status 'available', no participant id, so
+              // no Undo either) until the runner left and came back.
+              await clearPendingRegistration();
+              await invalidateEventCache();
+              break;
+
+            case 'registration_in_progress':
+              // ✅ Server: another registration of this account is still
+              // being written (RegistrationGuard). Retry then finds it.
+              showErrorModal(
+                'details:error.inProgressTitle',
+                'details:error.inProgressMessage',
+                () => callRegisterAPI(item, showConfirmPopup)
+              );
               break;
 
             case 'membership_required':
@@ -251,12 +290,7 @@ const useRegistrationHandler = (
             case 'token_invalid':
             case 'token_expired':
               await clearPendingRegistration();
-              await savePendingRegistration(
-                product_app_id,
-                item.product_option_value_app_id,
-                event_name
-              );
-              await handleUnauthorized(); // ✅ replaces navigation.navigate('LoginScreen')
+              await handleUnauthorized(item.product_option_value_app_id); // ✅ replaces navigation.navigate('LoginScreen')
               break;
 
             default:
@@ -287,8 +321,9 @@ const useRegistrationHandler = (
             if (API_CONFIG.DEBUG) {
               console.log('✅ Registration successful');
             }
-            setSelectedItem({ ...item, registration_status: 'registered' });
-            setModalVisible(true);
+            // ✅ No RegistrationModal here any more (audit L1): its 'registered'
+            // status reads "You're already registered!", shown to a runner who
+            // had just connected, on top of the success celebration below.
             await clearPendingRegistration();
             await invalidateEventCache();
             onSuccess?.(
@@ -312,12 +347,21 @@ const useRegistrationHandler = (
         if (API_CONFIG.DEBUG) {
           console.error('❌ Network/Critical error:', error);
         }
+        // ✅ A 401 arrives HERE as a thrown session_expired, never as the
+        // 'unauthorized' action above (audit H1). It read "Unable to connect"
+        // with a Retry that could not work. Keep the Connect and log in again.
+        const failure = classifyCallError(error);
+        if (failure === 'session_expired') {
+          await handleUnauthorized(item.product_option_value_app_id);
+          return;
+        }
         showErrorModal(
-          'details:error.networkErrorTitle',
-          'details:error.networkErrorMessage',
+          failure === 'server' ? 'details:error.registrationFailedTitle' : 'details:error.networkErrorTitle',
+          failure === 'server' ? 'details:error.registrationFailedMessage' : 'details:error.networkErrorMessage',
           () => callRegisterAPI(item, showConfirmPopup)
         );
       } finally {
+        inFlightRef.current = false;
         setRegisterLoading(false);
         setRegisteringItemId(null); 
       }
@@ -349,6 +393,9 @@ const useRegistrationHandler = (
         );
         return;
       }
+
+      if (inFlightRef.current) return;
+      inFlightRef.current = true;
 
       try {
         setRegisterLoading(true);
@@ -422,12 +469,19 @@ const useRegistrationHandler = (
         if (API_CONFIG.DEBUG) {
           console.error('❌ Network error:', error);
         }
+        // ✅ Session gone: log in again rather than a Retry that cannot work (audit H1).
+        const failure = classifyCallError(error);
+        if (failure === 'session_expired') {
+          await handleUnauthorized();
+          return;
+        }
         showErrorModal(
-          'details:error.networkErrorTitle',
-          'details:error.networkErrorMessage',
+          failure === 'server' ? 'details:error.unregisterFailedTitle' : 'details:error.networkErrorTitle',
+          failure === 'server' ? 'details:error.unregisterFailedMessage' : 'details:error.networkErrorMessage',
           () => callDeleteAPI(item)
         );
       } finally {
+        inFlightRef.current = false;
         setRegisterLoading(false);
       }
     },
@@ -452,6 +506,9 @@ const useRegistrationHandler = (
       return;
     }
 
+    if (inFlightRef.current) return;
+    inFlightRef.current = true;
+
     try {
       setRegisterLoading(true);
       setRegisterError(null);
@@ -467,8 +524,12 @@ const useRegistrationHandler = (
       );
 
       const action = result.action || 'unknown_error';
+      // ✅ already_registered counts as done (audit M1): the Confirm before it
+      // timed out after the server inserted, and this is the Retry. It fell to
+      // "confirmation failed" + Retry, which answered the same, forever.
+      const registered = isRegisteredOutcome(action);
 
-      if (!isSuccessAction(action)) {
+      if (!isSuccessAction(action) && !registered) {
         if (API_CONFIG.DEBUG) {
           console.error('❌ Confirmation failed with action:', action);
         }
@@ -478,9 +539,19 @@ const useRegistrationHandler = (
 
         switch (action) {
           case 'bib_number_invalid':
+            // ✅ details: keys - confirmModal has no invalidBib* text, the
+            // popup printed the raw key.
             showErrorModal(
-              'confirmModal:error.invalidBibTitle',
-              'confirmModal:error.invalidBibMessage',
+              'details:error.invalidBibTitle',
+              'details:error.invalidBibMessage',
+              handleConfirmRegister
+            );
+            break;
+
+          case 'registration_in_progress':
+            showErrorModal(
+              'details:error.inProgressTitle',
+              'details:error.inProgressMessage',
               handleConfirmRegister
             );
             break;
@@ -502,7 +573,7 @@ const useRegistrationHandler = (
         return;
       }
 
-      if (action === 'registered') {
+      if (registered) {
         if (API_CONFIG.DEBUG) {
           console.log('✅ Confirmation successful');
         }
@@ -530,12 +601,25 @@ const useRegistrationHandler = (
       if (API_CONFIG.DEBUG) {
         console.error('❌ Network error:', error);
       }
+      // ✅ Session gone (audit H1): keep the Connect for after the login and
+      // close the sheet, instead of a Retry that cannot work.
+      const failure = classifyCallError(error);
+      if (failure === 'session_expired') {
+        const keep = confirmItem.product_option_value_app_id;
+        setConfirmModalVisible(false);
+        setConfirmData(null);
+        setConfirmItem(null);
+        await handleUnauthorized(keep);
+        return;
+      }
+      // ✅ details: keys - confirmModal has no networkError* text (raw key shown).
       showErrorModal(
-        'confirmModal:error.networkErrorTitle',
-        'confirmModal:error.networkErrorMessage',
+        failure === 'server' ? 'confirmModal:error.confirmationFailedTitle' : 'details:error.networkErrorTitle',
+        failure === 'server' ? 'confirmModal:error.confirmationFailedMessage' : 'details:error.networkErrorMessage',
         handleConfirmRegister
       );
     } finally {
+      inFlightRef.current = false;
       setRegisterLoading(false);
     }
   }, [
@@ -565,13 +649,7 @@ const useRegistrationHandler = (
           console.log('🔐 No token, redirecting to login');
         }
 
-        await savePendingRegistration(
-          product_app_id,
-          item.product_option_value_app_id,
-          event_name
-        );
-
-        await handleUnauthorized(); // ✅ replaces navigation.navigate('LoginScreen')
+        await handleUnauthorized(item.product_option_value_app_id); // ✅ replaces navigation.navigate('LoginScreen')
         return;
       }
 

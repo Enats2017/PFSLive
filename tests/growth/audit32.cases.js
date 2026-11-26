@@ -125,12 +125,12 @@ module.exports = ({ test, SRC }) => {
       // nation · age under the favourite's name (the name / bib lines take 2 since the full audit)
       'screens/FavouriteScreen/FavouriteCard.tsx:157',
       // one line that SHRINKS to fit (adjustsFontSizeToFit), never "…": tab pills, the distance figure
-      'screens/FollowerEventList/FollowerEvent.tsx:403', 'screens/ParticipantEvent/ParticipantEvent.tsx:367',
-      'screens/HomeScreen.tsx:3016',
+      'screens/FollowerEventList/FollowerEvent.tsx:437', 'screens/ParticipantEvent/ParticipantEvent.tsx:395',
+      'screens/HomeScreen.tsx:3384',   // the distance figure (moved down by the 2026-11-26 Home changes)
       // a checkpoint's km or name in a label / value row
       'screens/ResultDetailsScreen/RaceInfoTab.tsx:264',
       // status value ("In progress" / "Bezig" / "En cours") in a full-width row
-      'screens/ResultDetailsScreen/RaceLive.tsx:116', 'screens/ResultDetailsScreen/UpcomingRace.tsx:30',
+      'screens/ResultDetailsScreen/RaceLive.tsx:129', 'screens/ResultDetailsScreen/UpcomingRace.tsx:30',
     ];
     assert.deepStrictEqual(found.sort(), reviewed.sort());
   });

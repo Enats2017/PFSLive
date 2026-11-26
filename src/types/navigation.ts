@@ -22,6 +22,8 @@ export type RootStackParamList = {
     event_name: string;
     event_image?: string; 
     auto_register_id: number | null;
+    /** A new value makes the distance list refetch past the 30 s cache (e.g. back from the e-mail confirmation link). */
+    refresh_nonce?: number | null;
     /**
      * Highlight + scroll to this distance, NEVER register. auto_register_id
      * registers immediately (post-login resume) — an email/deep link must use
@@ -72,6 +74,9 @@ export type RootStackParamList = {
   EditProfileScreen: undefined;
   EditPersonalEvent: {
     eventId: number;
+    // ✅ The event's participant row (re-audit 2026-11-26) — the edit cancels
+    // start reminders only when they belong to it. Optional: older callers.
+    participantId?: number;
   };
   ResultDetails: {
     product_app_id:number,

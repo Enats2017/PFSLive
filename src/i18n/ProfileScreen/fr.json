@@ -24,7 +24,11 @@
     "permission_message": "Veuillez autoriser l'accès aux photos pour changer votre avatar.",
     "camera_permission": "L'autorisation de la caméra est requise pour prendre des photos.",
     "invalid_user_id": "ID utilisateur invalide",
-    "generic_error": "Une erreur s'est produite. Veuillez réessayer."
+    "generic_error": "Une erreur s'est produite. Veuillez réessayer.",
+    "save_failed_title": "Non enregistré",
+    "save_no_connection": "Pas de connexion internet. Vos modifications n’ont pas été enregistrées - veuillez réessayer.",
+    "save_picture_rejected": "Cette photo n’a pas pu être utilisée (trop lourde ou pas au format JPG/PNG). Rien n’a été enregistré - choisissez une autre photo ou retirez-la, puis enregistrez à nouveau.",
+    "save_generic": "Vos modifications n’ont pas pu être enregistrées. Veuillez réessayer."
   },
   "validation": {
     "firstname_invalid": "Le prénom doit contenir au moins 2 caractères",
@@ -85,7 +89,9 @@
     "verify_email_message": "Un code de vérification a été envoyé à votre nouvelle adresse e-mail.",
     "saved_title": "Enregistré",
     "saved_message": "Votre profil a été mis à jour.",
-    "success_profile_updated": "Profil mis à jour avec succès !"
+    "success_profile_updated": "Profil mis à jour avec succès !",
+    "draft_restored_title": "Modifications restaurées",
+    "draft_restored": "Nous avons gardé les modifications que vous n’aviez pas encore enregistrées. Vérifiez-les et touchez Enregistrer les modifications."
   },
   "avatar": {
     "remove_photo": "Supprimer la photo",

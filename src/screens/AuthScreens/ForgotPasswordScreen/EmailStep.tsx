@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -13,6 +13,7 @@ import { commonStyles, palette } from '../../../styles/common.styles';
 import { forgotStyles } from '../../../styles/forgetPassword.styles';
 import { analyticsService } from '../../../services/analyticsService';
 import { Button } from '../../../components/ui';
+import { tryBeginSubmit, endSubmit } from '../../../services/authFlowGuards';
 
 interface EmailStepProps {
   onNext: (email: string, verificationToken: string) => void;
@@ -40,8 +41,14 @@ const EmailStep: React.FC<EmailStepProps> = ({ onNext, onBack }) => {
     if (error) setError('');
   }, [error]);
 
+  // ✅ One request at a time (audit 2026-11-26, finding 9): each request mints a
+  // new token + code server-side, so a same-frame double tap could leave this
+  // screen holding the token whose code was overwritten.
+  const sendingRef = useRef(false);
+
   const handleSendOtp = useCallback(async () => {
     if (!validate()) return;
+    if (!tryBeginSubmit(sendingRef)) return;
     
     setLoading(true);
     setError('');
@@ -68,6 +75,7 @@ const EmailStep: React.FC<EmailStepProps> = ({ onNext, onBack }) => {
       }
     } finally {
       setLoading(false);
+      endSubmit(sendingRef);
     }
   }, [email, validate, onNext, t]);
 

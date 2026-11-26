@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { API_CONFIG, getApiEndpoint } from '../constants/config';
+import { tokenIssueGate } from './authFlowGuards';
 
 // ✅ TYPES
 export type OtpPurpose = 'registration' | 'forgot_password' | 'device_change' | 'email_change';
@@ -22,6 +23,8 @@ export interface ResendOtpPayload {
 export interface OtpResponse {
   success: boolean;
   error?:  string | null;
+  // ✅ Client-side only - see otpService.verify.
+  superseded?: boolean;
   data?: {
     purpose?:              string;       // ✅ both flows
     token?:                string;       // ✅ registration only
@@ -48,6 +51,11 @@ export const otpService = {
    * Verify OTP code
    */
   async verify(payload: VerifyOtpPayload): Promise<OtpResponse> {
+    // ✅ registration / device_change issue the account's single token, exactly
+    // like login - same newest-wins ticket (see authService.login, audit
+    // 2026-11-26 findings 1-2). Forgot password and email change issue none.
+    const issuesToken = payload.purpose === 'registration' || payload.purpose === 'device_change';
+    const ticket = issuesToken ? tokenIssueGate.begin() : 0;
     try {
       const headers = await API_CONFIG.getHeaders();
 
@@ -66,6 +74,12 @@ export const otpService = {
 
       if (API_CONFIG.DEBUG) {
         console.log('✅ OTP verified:', response.data.success);
+      }
+
+      if (issuesToken && response.data?.data?.token && !tokenIssueGate.isLatest(ticket)) {
+        // Overtaken by a newer token-issuing request: this token is already
+        // revoked server-side. The caller must not save it or log in on it.
+        return { ...response.data, superseded: true };
       }
 
       return response.data;

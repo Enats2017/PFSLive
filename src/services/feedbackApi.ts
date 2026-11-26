@@ -32,6 +32,7 @@ interface SubmitFeedbackResult {
 export const ALLOWED_TOPICS: TopicKey[] = ['bug', 'feature', 'event', 'billing', 'other'];
 
 const MESSAGE_MIN_LENGTH = 3;
+export const FEEDBACK_TIMEOUT_MS = 45000;
 const MESSAGE_MAX_LENGTH = 500; // UI cap shown in char-count; backend allows up to 5000
 
 // ==================== VALIDATION ====================
@@ -101,7 +102,11 @@ export const feedbackApi = {
                 requestBody,
                 {
                     headers,
-                    timeout: API_CONFIG.TIMEOUT,
+                    // ✅ 45 s, not 15 (audit 2026-11-26): the server stores the
+                    // row and sends two mails before answering; a slow mail
+                    // made the app say "failed" for a sent message and the
+                    // user sent it again.
+                    timeout: FEEDBACK_TIMEOUT_MS,
                 },
             );
 

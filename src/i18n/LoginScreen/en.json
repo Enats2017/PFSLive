@@ -22,7 +22,8 @@
     "accountNotFoundTitle": "Account not found",
     "accountNotFound": "No account found with this email address",
     "emailNotVerifiedTitle": "Account not active yet",
-    "emailNotVerified": "If you signed up here, enter the code we emailed you. If you were registered on the website, open the validation link in that email to choose a password, then sign in with it.",
+    "emailNotVerified": "If you signed up in the app, register again with the same email address to receive a new code. If you were registered on the website, open the validation link in that email to choose a password, then sign in with it.",
+    "emailNotVerifiedResume": "Enter the code we emailed you to activate your account. Tap Resend if it has expired.",
     "accountDisabledTitle": "Account disabled",
     "accountDisabled": "Your account has been disabled. Please contact support for assistance.",
     "deviceNotAllowedTitle": "Device not allowed",
@@ -57,5 +58,7 @@
     }
   },
   "createAccount": "Create an account",
+  "pendingConnectExpiredTitle": "Request expired",
+  "pendingConnectExpired": "Your earlier request has expired. Open the event and tap Live tracking again.",
   "noAccountNote": "Most of Livio works without an account — you only need one to race or follow."
 }

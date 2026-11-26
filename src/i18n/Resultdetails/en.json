@@ -6,6 +6,8 @@
     "awards": "Awards"
   },
   "raceInfo": {
+    "staleSince": "Connection problem — last updated {{time}}",
+    "staleNoTime": "Connection problem — not updated",
     "finisher": "Finisher",
     "raceTime": "Race time",
     "previousTimingPoint": "Previous timing point",

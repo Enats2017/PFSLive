@@ -191,25 +191,33 @@ export const analyticsService = {
   async markAsParticipant(
     sourceAction: "register" | "create_event" | "start_tracking",
   ) {
-    const alreadyParticipant = await tokenService.getHasParticipated();
-    if (alreadyParticipant) {
-      console.log(
-        "📊 [Analytics] markAsParticipant skipped — already participant",
-      );
-      return;
+    // ✅ Never throws (audit 2026-11-26). Callers await it right after a
+    // server write succeeded (CreatePersonalEvent): a Firebase / storage
+    // rejection landed in their catch and showed "error" over a created event,
+    // inviting a second one. Analytics must not decide what the user is told.
+    try {
+      const alreadyParticipant = await tokenService.getHasParticipated();
+      if (alreadyParticipant) {
+        console.log(
+          "📊 [Analytics] markAsParticipant skipped — already participant",
+        );
+        return;
+      }
+
+      await tokenService.setHasParticipated();
+
+      const hasUsedFollowerFeature =
+        await tokenService.getHasUsedFollowerFeature();
+      const role = await syncUserProperties(true, hasUsedFollowerFeature);
+
+      console.log("📊 [Analytics] User upgraded to", role, "via:", sourceAction);
+
+      await logEvent(analytics, "became_participant", {
+        source_action: sourceAction,
+      });
+    } catch (e: any) {
+      console.log("📊 [Analytics] markAsParticipant failed (ignored):", e?.message);
     }
-
-    await tokenService.setHasParticipated();
-
-    const hasUsedFollowerFeature =
-      await tokenService.getHasUsedFollowerFeature();
-    const role = await syncUserProperties(true, hasUsedFollowerFeature);
-
-    console.log("📊 [Analytics] User upgraded to", role, "via:", sourceAction);
-
-    await logEvent(analytics, "became_participant", {
-      source_action: sourceAction,
-    });
   },
 
   async markAsFollowerActive(

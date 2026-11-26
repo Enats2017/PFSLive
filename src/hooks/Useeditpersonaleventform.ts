@@ -78,10 +78,15 @@ export const useEditPersonalEventForm = () => {
   // must not reject its own stored race_date as "past" — only a date the user
   // actively picks is held to that rule.
   const [loadedDate, setLoadedDate] = useState<string>('');
+  // ✅ The start time the event had when loaded (audit 2026-11-26): with
+  // loadedDate it tells the screen whether date/time changed, which is when
+  // the phone's time zone is sent (editTimezoneToSend).
+  const [loadedStartTime, setLoadedStartTime] = useState<string>('');
 
   const initFormFromEvent = useCallback(
     (event: PersonalEvent) => {
       setLoadedDate(event.race_date ?? '');
+      setLoadedStartTime((event.start_hour ?? '').substring(0, 5));
       setFormData({
         name: event.name ?? '',
         selectedEventType: matchEventType(event.event_type, eventTypeOptions),
@@ -186,6 +191,7 @@ export const useEditPersonalEventForm = () => {
     formData,
     errors,
     loadedDate,
+    loadedStartTime,
     eventTypeOptions,
     categoryOptions,
     initFormFromEvent,

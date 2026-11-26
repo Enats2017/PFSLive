@@ -1,6 +1,24 @@
 import { apiClient, AppError } from './api';
 import { API_CONFIG, getApiEndpoint } from '../constants/config';
 import { isDeletedAccountCode } from './profileLoadError';
+import { clearPendingRegistration } from '../hooks/usePendingRegistration';
+import { pendingOtpService } from './pendingOtpService';
+
+// ✅ The account this phone was signed in to no longer exists (GDPR delete on
+// the website, or disabled) - audit 2026-11-26, finding 13. The deletion frees
+// the device_id, so the NEXT account registered on this phone must not inherit
+// the old one's half-finished event registration (auto-submitted after the next
+// login) or its unverified-registration code. Deliberately NOT done on every
+// token clear: useRegistrationHandler saves the pending registration right
+// before it clears a rejected token, and race state must survive a mid-race 401
+// so the queued fixes drain after the runner logs in again. The tracking keys
+// (@PFSLive:trackingParams and the session keys) belong to gpsService and are
+// not touched here.
+async function clearDeletedAccountState(): Promise<void> {
+    try {
+        await Promise.allSettled([clearPendingRegistration(), pendingOtpService.clear()]);
+    } catch { /* never block the session_expired answer */ }
+}
 
 /* ============================
    PROFILE TYPE
@@ -33,6 +51,17 @@ interface ProfileResponseData {
 ============================ */
 
 export const fetchProfileApi = async (): Promise<Profile> => {
+    try {
+        return await requestProfile();
+    } catch (err) {
+        // get_profile_api only answers session_expired for a deleted/disabled
+        // account or a dead token; either way this phone's sign-in is over.
+        if (err instanceof AppError && err.code === 'session_expired') await clearDeletedAccountState();
+        throw err;
+    }
+};
+
+const requestProfile = async (): Promise<Profile> => {
     const headers = await API_CONFIG.getHeaders();
     console.log('🔵 [fetchProfileApi] Calling endpoint:', API_CONFIG.ENDPOINTS.Edit_profile)
 

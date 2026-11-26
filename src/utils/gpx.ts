@@ -67,7 +67,11 @@ export async function parseGPX(gpxContent: string): Promise<RouteData> {
 
 		// If no stations, create them from track points (every ~10km)
 		if (stations.length === 0 && trackPoints.length > 0) {
-			const pointsPerStation = Math.floor(trackPoints.length / 5);
+			// ✅ At least 1 (app audit 2026-11-26): a GPX with 1-4 track points
+			// and no <wpt> gave floor(n/5) = 0, so `i += 0` never ended — the
+			// JS thread hung pushing stations until the app was killed for
+			// memory, for the runner and every fan opening that map.
+			const pointsPerStation = Math.max(1, Math.floor(trackPoints.length / 5));
 			for (let i = 0; i < trackPoints.length; i += pointsPerStation) {
 				const pt = trackPoints[i];
 				stations.push({

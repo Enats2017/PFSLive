@@ -302,7 +302,9 @@ test('follows are re-read on focus (not on the first one), and a change refreshe
   at('if (!focusedOnce.current) { focusedOnce.current = true; return; }');
   at('void refreshFollowedUsers();');
   at('}, [followsKey, loading]);');
-  at('}, [hasLoadedInitialData.current, loading, selectedDistance, followsKey, refreshMs]);');
+  // isFocused joined the deps (app audit 2026-11-26): the timer runs only
+  // while the map is on top — see the auto-refresh section below.
+  at('}, [hasLoadedInitialData.current, loading, selectedDistance, followsKey, refreshMs, isFocused]);');
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

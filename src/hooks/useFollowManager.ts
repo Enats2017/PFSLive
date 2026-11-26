@@ -87,6 +87,9 @@ function markFollowerActive(): void {
   } catch { /* analytics only */ }
 }
 
+/** A second toggle of the same row this soon after the first finished is a double tap. */
+const TOGGLE_COOLDOWN_MS = 600;
+
 export function useFollowManager(
   t: any,
   productAppId?: number,
@@ -126,6 +129,24 @@ export function useFollowManager(
   // empty and ran two follows (two toasts, two follow_toggle events). The ref
   // is claimed synchronously; the state only drives the spinners.
   const inFlightRef = useRef<Set<string>>(new Set());
+  // ✅ When each key's last toggle FINISHED. A follow is local-only and done in
+  // ~10-50 ms, so inFlightRef no longer blocks the second half of a double tap
+  // — follow, then straight away unfollow (two toasts, nothing followed). A
+  // second toggle of the same row within TOGGLE_COOLDOWN_MS is that double tap,
+  // not a decision (audit 2026-11-26 #7).
+  const settledAtRef = useRef<Map<string, number>>(new Map());
+  // ✅ Password submit, claimed synchronously. isVerifying is STATE (the
+  // button's `disabled`): a double tap ran two verifications against the same
+  // render, and on event screens the second toggle read "followed" from
+  // storage and unfollowed again (audit 2026-11-26 #5).
+  const submittingRef = useRef(false);
+  // Bumped when the password sheet is closed: a verification still in flight
+  // for a sheet the user dismissed must not follow anyway (audit 2026-11-26 #6).
+  const passwordSheetGenRef = useRef(0);
+  const justSettled = (key: string): boolean => {
+    const at = settledAtRef.current.get(key);
+    return at !== undefined && Date.now() - at < TOGGLE_COOLDOWN_MS;
+  };
 
   const [passwordModalVisible, setPasswordModalVisible] = useState(false);
   const [pendingFollow, setPendingFollow] = useState<{
@@ -282,7 +303,7 @@ export function useFollowManager(
         const numericId = Number(customerId);
         const operationKey = `customer:${numericId}`;
 
-        if (inFlightRef.current.has(operationKey)) {
+        if (inFlightRef.current.has(operationKey) || justSettled(operationKey)) {
           return;
         }
         inFlightRef.current.add(operationKey);
@@ -356,6 +377,7 @@ export function useFollowManager(
 
           toastError(t("follower:error.title"), t("follower:error.message"));
         } finally {
+          settledAtRef.current.set(operationKey, Date.now());
           inFlightRef.current.delete(operationKey);
           setFollowingInProgress((prev) => {
             const next = new Set(prev);
@@ -378,7 +400,7 @@ export function useFollowManager(
         ? `customer:${customerAppId}`
         : `product:${productId}:bib:${bib}`;
 
-      if (inFlightRef.current.has(operationKey)) {
+      if (inFlightRef.current.has(operationKey) || justSettled(operationKey)) {
         return;
       }
       // Claimed BEFORE the status read below (an await) — see inFlightRef.
@@ -529,6 +551,7 @@ export function useFollowManager(
 
         toastError(t("follower:error.title"), t("follower:error.message"));
       } finally {
+        settledAtRef.current.set(operationKey, Date.now());
         inFlightRef.current.delete(operationKey);
         setFollowingInProgress((prev) => {
           const next = new Set(prev);
@@ -615,8 +638,14 @@ export function useFollowManager(
       }
 
       if (!pendingFollow?.customerAppId) return;
+      // See submittingRef: the second tap of a double tap stops here.
+      if (submittingRef.current) return;
+      submittingRef.current = true;
+      const sheetGen = passwordSheetGenRef.current;
+      // The sheet was closed while this ran: its result is nobody's any more.
+      const sheetClosed = () => sheetGen !== passwordSheetGenRef.current;
 
-      const currentFollow = pendingFollow; 
+      const currentFollow = pendingFollow;
 
       try {
         setIsVerifying(true);
@@ -626,6 +655,9 @@ export function useFollowManager(
           currentFollow.customerAppId,
           trimmedPassword,
         );
+
+        // Dismissed during the check: the user said no — do not follow.
+        if (sheetClosed()) return;
 
         if (!verified) {
           setPasswordError(t("follower:error.wrongPassword"));
@@ -647,6 +679,7 @@ export function useFollowManager(
         setPasswordModalVisible(false);
         setPendingFollow(null);
       } catch (error: any) {
+        if (sheetClosed()) return;
         const code = error?.message;
         if (code === "wrong_password") {
           setPasswordError(t("follower:error.wrongPassword"));
@@ -657,7 +690,12 @@ export function useFollowManager(
           setPasswordError(t("follower:error.generic"));
         }
       } finally {
-        setIsVerifying(false);
+        // A closed sheet already released both (handlePasswordModalClose); a
+        // NEW sheet's submit may be running by now — leave its state alone.
+        if (!sheetClosed()) {
+          submittingRef.current = false;
+          setIsVerifying(false);
+        }
       }
     },
     [
@@ -671,6 +709,12 @@ export function useFollowManager(
   );
 
   const handlePasswordModalClose = useCallback(() => {
+    // Disowns a verification still in flight (see passwordSheetGenRef) and
+    // frees the submit guard: fetch has no timeout, so a hung check must not
+    // block the next sheet's Submit for the rest of the visit.
+    passwordSheetGenRef.current++;
+    submittingRef.current = false;
+    setIsVerifying(false);
     setPasswordModalVisible(false);
     setPendingFollow(null);
     setPasswordError("");

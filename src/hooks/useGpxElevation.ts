@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { XMLParser } from 'fast-xml-parser';
 import { getImageUrl } from '../constants/config';
+import { gpxService } from '../services/gpxService';
 
 export interface GpxPoint {
     distance: number;
@@ -19,6 +19,14 @@ function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): nu
     return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+// ✅ Through gpxService (app audit 2026-11-26) instead of its own fetch + parser:
+//   - the route is downloaded once per URL per app session (in-memory cache
+//     with ETag revalidation) — every Result Details opened downloaded the
+//     whole file again;
+//   - the request has a deadline (Android fetch has none of its own);
+//   - utils/gpx reads EVERY <trk>/<trkseg> (and <rte> files): the old
+//     `trk.trkseg.trkpt ?? trk[0].trkseg[0].trkpt` found no points when one
+//     <trk> held several <trkseg>, so those routes had no elevation chart.
 export function useGpxElevation(gpxUrl?: string) {
     const [points, setPoints] = useState<GpxPoint[]>([]);
     const [loading, setLoading] = useState(false);
@@ -27,9 +35,6 @@ export function useGpxElevation(gpxUrl?: string) {
     useEffect(() => {
         // ✅ Use getImageUrl to fix localhost → real IP
         const resolvedUrl = getImageUrl(gpxUrl) ?? undefined;
-
-        console.log('[GPX] Original URL:', gpxUrl);
-        console.log('[GPX] Resolved URL:', resolvedUrl);
 
         if (!resolvedUrl) {
             console.warn('[GPX] No URL — skipping fetch');
@@ -40,71 +45,28 @@ export function useGpxElevation(gpxUrl?: string) {
         setLoading(true);
         setError(null);
 
-        fetch(resolvedUrl)  // ✅ using resolvedUrl not gpxUrl
-            .then(res => {
-                console.log('[GPX] Fetch status:', res.status, res.ok ? '✅' : '❌');
-                if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                return res.text();
-            })
-            .then(xml => {
+        gpxService.fetchAndParseGPX(resolvedUrl)
+            .then((route) => {
                 if (cancelled) return;
-
-                console.log('[GPX] XML length:', xml.length);
-                console.log('[GPX] XML preview:', xml.slice(0, 200));
-
-                const parser = new XMLParser({
-                    ignoreAttributes: false,
-                    attributeNamePrefix: '@_',
-                });
-                const result = parser.parse(xml);
-
-                console.log('[GPX] Parsed keys:', Object.keys(result ?? {}));
-
-                const trkpts =
-                    result?.gpx?.trk?.trkseg?.trkpt ??
-                    result?.gpx?.trk?.[0]?.trkseg?.[0]?.trkpt ??
-                    [];
-
-                const ptArray = Array.isArray(trkpts) ? trkpts : [trkpts];
-
-                console.log('[GPX] Track points found:', ptArray.length);
-
-                if (ptArray.length === 0) {
+                const pts = route.trackPoints;
+                if (pts.length === 0) {
                     console.warn('[GPX] ⚠️ No trkpt found — check GPX structure');
                     setPoints([]);
                     return;
                 }
-
                 let cumDist = 0;
-                let prevLat: number | null = null;
-                let prevLon: number | null = null;
-
-                const parsed: GpxPoint[] = ptArray.map((pt: any) => {
-                    const lat = parseFloat(pt['@_lat'] ?? '0');
-                    const lon = parseFloat(pt['@_lon'] ?? '0');
-                    const ele = parseFloat(pt?.ele ?? '0');
-
-                    if (prevLat !== null && prevLon !== null) {
-                        cumDist += haversineKm(prevLat, prevLon, lat, lon);
-                    }
-                    prevLat = lat;
-                    prevLon = lon;
-
+                const parsed: GpxPoint[] = pts.map((pt, i) => {
+                    if (i > 0) cumDist += haversineKm(pts[i - 1].lat, pts[i - 1].lon, pt.lat, pt.lon);
                     return {
                         distance: parseFloat(cumDist.toFixed(3)),
-                        elevation: ele,
+                        elevation: Number.isFinite(pt.ele) ? pt.ele : 0,
                     };
                 });
-
-                console.log('[GPX] First point:', parsed[0]);
-                console.log('[GPX] Last point:', parsed[parsed.length - 1]);
-                console.log('[GPX] Total distance:', parsed[parsed.length - 1]?.distance, 'km');
-
-                if (!cancelled) setPoints(parsed);
+                setPoints(parsed);
             })
             .catch(e => {
-                console.error('[GPX] ❌ Error:', e.message);
-                if (!cancelled) setError(e.message);
+                console.error('[GPX] ❌ Error:', e?.message);
+                if (!cancelled) setError(e?.message ?? 'gpx_failed');
             })
             .finally(() => {
                 if (!cancelled) setLoading(false);

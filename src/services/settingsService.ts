@@ -65,19 +65,22 @@ class SettingsService {
     }
 
     // ✅ Returns Settings directly — public always gets empty password
-   async updateSettings(settings: Settings, languageId?: number): Promise<{ settings: Settings; languageId: number }> {
+   // ✅ settings === null → a LANGUAGE-ONLY update (re-audit 2026-11-26): no
+   // visibility is sent, so a screen that never loaded the real one cannot
+   // overwrite it with its default.
+   async updateSettings(settings: Settings | null, languageId?: number): Promise<{ settings: Settings; languageId: number }> {
         const deviceId = await getDeviceId();
         const language_id = languageId ?? getCurrentLanguageId();
-        const body: Record<string, unknown> = {
-            action: 'update',
-            settings: {
+        const body: Record<string, unknown> = { action: 'update' };
+        if (settings) {
+            body.settings = {
                 live_tracking_visibility: settings.live_tracking_visibility,
                 live_tracking_password:
                     settings.live_tracking_visibility === 'public'
                         ? ''
                         : settings.live_tracking_password.trim(),
-            },
-        };
+            };
+        }
 
         // top-level, siblings of `action`/`settings` — backend reads these
         // directly off $post_data, not from inside settings

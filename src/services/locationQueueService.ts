@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
 import { LocationData } from './locationService';
 import { API_CONFIG } from '../constants/config';
+import { PREVIOUS_DAY_QUIET_MS } from './trackingSessionRules';
 
 const QUEUE_STORAGE_KEY = '@PFSLive:locationQueue';
 // ✅ 1500, was 500. Offline fixes are spaced 0.75 × interval (45 s at the usual
@@ -218,6 +219,20 @@ export const locationQueueService = {
       queue.push(location);
       await AsyncStorage.setItem(QUEUE_STORAGE_KEY, JSON.stringify(queue));
       await AsyncStorage.setItem(QUEUE_COUNT_KEY, String(queue.length));
+      // ✅ A live fix queued after 30 min without any send or queued fix ends a
+      // "quiet gap" (2026-11-26 re-audit) — same bookkeeping as gpsService's
+      // send path (its QUIET_GAP_END_KEY, re-declared here: no import cycle).
+      // Without it a previous-day session that only QUEUES this morning (a
+      // backlog left from yesterday) never looked like it "came back today".
+      try {
+        const nowQ = Date.now();
+        const lastQ = parseInt((await AsyncStorage.getItem(LAST_QUEUED_KEY)) || '0', 10) || 0;
+        const lastS = parseInt((await AsyncStorage.getItem('@PFSLive:lastSentAt')) || '0', 10) || 0;
+        const prev = Math.max(lastQ, lastS);
+        if (prev > 0 && nowQ - prev >= PREVIOUS_DAY_QUIET_MS && (await AsyncStorage.getItem(TRACKING_PARAMS_KEY)) !== null) {
+          await AsyncStorage.setItem('@PFSLive:quietGapEndedAt', String(nowQ));
+        }
+      } catch { /* bookkeeping only — never cost the fix */ }
       // ✅ Advance the throttle clock on EVERY real insert — throttled or
       // bypassed — so an order-guard insert still counts as "we just queued",
       // keeping the next throttled (outage) insert spaced correctly.

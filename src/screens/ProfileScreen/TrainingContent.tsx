@@ -29,6 +29,9 @@ interface TrainingContentProps {
         live: { page: number; total_pages: number };
     };
     onDeleteEvent: (event: AthleteEvent) => void;
+    // ✅ participant_app_id of the live session (audit 2026-11-26) — that card
+    // gets no Edit / Delete while it is being tracked.
+    trackedParticipantId?: string | null;
 }
 
 const TrainingContent: React.FC<TrainingContentProps> = ({
@@ -39,6 +42,7 @@ const TrainingContent: React.FC<TrainingContentProps> = ({
     pagination,
     profile,
     onDeleteEvent,
+    trackedParticipantId = null,
 }) => {
     const hasMore = pagination.live.page < pagination.live.total_pages;
     const { t } = useTranslation(['profile', "ownProfile"]);
@@ -74,11 +78,12 @@ const TrainingContent: React.FC<TrainingContentProps> = ({
             item={item}
             isOwnProfile={profile?.is_own_profile === 1}
             onDelete={onDeleteEvent}
+            isTrackedNow={trackedParticipantId !== null && String(item.participant_app_id) === trackedParticipantId}
         />
 
     // ✅ Real deps (layout audit 2026-10-22): [] froze the first render's
     // profile / onDeleteEvent, so isOwnProfile and the delete handler went stale.
-    ), [profile?.is_own_profile, onDeleteEvent]);
+    ), [profile?.is_own_profile, onDeleteEvent, trackedParticipantId]);
 
     const keyExtractor = useCallback(
         (item: AthleteEvent, index: number) => `${item.participant_app_id}-${index}`,

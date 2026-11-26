@@ -44,6 +44,10 @@ const ContactFeedbackScreen: React.FC<ContactFeedbackScreenprops> = ({ navigatio
     const [topic, setTopic] = useState<TopicKey | null>(null);
     const [errors, setErrors] = useState<FieldErrors>({});
     const [submitting, setSubmitting] = useState(false);
+    // ✅ Synchronous send gate (audit 2026-11-26): `submitting` is state, so a
+    // double tap in one frame sent the feedback twice (two rows, two team
+    // mails, two auto-replies). The server also folds a repeat now.
+    const sendingRef = useRef(false);
     const [showSuccess, setShowSuccess] = useState(false);
     const scrollRef = useRef<ScrollView>(null);
     // ✅ Measured position of the message field inside the scroll content
@@ -90,7 +94,7 @@ const ContactFeedbackScreen: React.FC<ContactFeedbackScreenprops> = ({ navigatio
 
 
     const handleSubmit = useCallback(async () => {
-        if (submitting) return;
+        if (submitting || sendingRef.current) return;
 
         const fieldErrors = validateFeedbackFields({ topic, message, email });
 
@@ -111,9 +115,15 @@ const ContactFeedbackScreen: React.FC<ContactFeedbackScreenprops> = ({ navigatio
         };
 
         setErrors({});
+        sendingRef.current = true;
         setSubmitting(true);
-        const result = await feedbackApi.submit(payload);
-        setSubmitting(false);
+        let result: Awaited<ReturnType<typeof feedbackApi.submit>>;
+        try {
+            result = await feedbackApi.submit(payload);   // never throws
+        } finally {
+            setSubmitting(false);
+            sendingRef.current = false;
+        }
 
         if (result.success) {
             resetForm();

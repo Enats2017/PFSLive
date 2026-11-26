@@ -32,6 +32,10 @@ const EventDetails = ({ route }: EventDetailsProps) => {
   const [raceDate, setRaceDate] = useState<string | null>(null);
 
   const { product_app_id, event_name, auto_register_id, event_image, preselect_pov_id } = route.params;
+  // ✅ RN2 (app re-audit 2026-11-26): a link that needs fresh data passes a new
+  // refresh_nonce (livio://registration-confirmed). Read loosely: older callers
+  // and the param list type do not carry it.
+  const refresh_nonce = (route.params as { refresh_nonce?: number | null }).refresh_nonce ?? null;
 
   const [showResults, setShowResults] = useState(true);
 
@@ -62,6 +66,7 @@ const EventDetails = ({ route }: EventDetailsProps) => {
             event_image={event_image}
             auto_register_id={auto_register_id ?? null}
             preselect_pov_id={preselect_pov_id ?? null}
+            refresh_nonce={refresh_nonce}
             onRefresh={handleRefresh}
             onResultsAvailability={setShowResults}
              onRaceDateAvailable={setRaceDate}

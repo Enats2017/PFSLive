@@ -16,6 +16,23 @@ export class AppError extends Error {
   }
 }
 
+/** Seconds from a 429's Retry-After header (ApiSecurity sends delta-seconds). */
+export function retryAfterSeconds(headers: any): number | null {
+  const raw = headers ? (headers["retry-after"] ?? headers["Retry-After"]) : undefined;
+  const n = Number(raw);
+  return Number.isFinite(n) && n > 0 ? Math.min(Math.ceil(n), 600) : null;
+}
+
+/**
+ * Is this error a rate-limit (HTTP 429) answer? handleError marks it with
+ * data.rateLimited; the code keeps the server's own text ("rate limit
+ * exceeded. try again in 60s."), which locationService's send-failure log
+ * already recognises — so that diagnostic is unchanged.
+ */
+export function isRateLimited(err: any): boolean {
+  return !!err && (err.data?.rateLimited === true || /rate limit/i.test(String(err.code ?? "")));
+}
+
 const EMPTY_CODES = new Set([
   "not_found",
   "not_found_in_race_result",
@@ -221,6 +238,20 @@ class ApiClient {
       // type="empty", and this is the one error the user can actually fix.
       if (status === 401 || code === "unauthorized" || code === "session_expired") {
         return new AppError("server", "session_expired");
+      }
+
+      // ✅ 429 = "too many requests from this address", never "no data"
+      // (app audit 2026-11-26). It used to fall into the 4xx → "empty" branch
+      // below, so a race-venue Wi-Fi over ApiSecurity's per-IP limit told every
+      // fan "No data found" on the results list — with no Retry button, since
+      // ErrorScreen hides it for type "empty". Type "server" keeps Retry, and
+      // `data.retryAfter` (the Retry-After header, seconds) lets pollers back off.
+      // Ahead of EMPTY_CODES: the body's error text is free-form.
+      if (status === 429) {
+        return new AppError("server", code, {
+          rateLimited: true,
+          retryAfter: retryAfterSeconds(error.response?.headers),
+        });
       }
 
       if (EMPTY_CODES.has(code) || status === 404 || status === 204) {

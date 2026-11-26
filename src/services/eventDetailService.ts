@@ -1,5 +1,5 @@
 import { apiClient } from './api';
-import { API_CONFIG, getApiEndpoint } from '../constants/config';
+import { API_CONFIG, getApiEndpoint, getDeviceId } from '../constants/config';
 import { getCurrentLanguageId } from '../i18n';
 
 export interface Distance {
@@ -124,7 +124,10 @@ export const eventDetailService = {
       }
 
       const url = getApiEndpoint(API_CONFIG.ENDPOINTS.EVENT_DETAIL);
-      const headers = await API_CONFIG.getHeaders();
+      // ✅ X-Device-Id: per-phone rate limit on the server (ApiSecurity
+      // rate_scope_field), not per venue IP; a header so the shared response
+      // cache (keyed on the body) is unchanged (app audit 2026-11-26).
+      const headers = { ...(await API_CONFIG.getHeaders()), 'X-Device-Id': await getDeviceId() };
 
       const requestBody: Record<string, any> = {
         product_app_id,
@@ -170,7 +173,10 @@ export const eventDetailService = {
       }
 
       const url = getApiEndpoint(API_CONFIG.ENDPOINTS.REGISTER_PARTICIPANT);
-      const headers = await API_CONFIG.getHeaders();
+      // ✅ X-Device-Id: per-phone rate limit (app re-audit 2026-11-26, RN1).
+      // insert_participant_app_api was 20/min for a whole IP with a lockout -
+      // a race-venue Wi-Fi full of runners connecting got 429.
+      const headers = { ...(await API_CONFIG.getHeaders()), 'X-Device-Id': await getDeviceId() };
 
       const requestBody: Record<string, any> = {
         product_option_value_app_id,
@@ -221,7 +227,8 @@ export const eventDetailService = {
       }
 
       const url = getApiEndpoint(API_CONFIG.ENDPOINTS.DELETE_PARTICIPANT);
-      const headers = await API_CONFIG.getHeaders();
+      // ✅ X-Device-Id: per-phone rate limit, as registerParticipant (RN1).
+      const headers = { ...(await API_CONFIG.getHeaders()), 'X-Device-Id': await getDeviceId() };
 
       const requestBody = { participant_app_id };
 

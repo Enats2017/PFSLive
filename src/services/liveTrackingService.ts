@@ -1,7 +1,31 @@
-import { API_CONFIG, getApiEndpoint } from '../constants/config';
+import { API_CONFIG, getApiEndpoint, getDeviceId } from '../constants/config';
 import { tokenService } from './tokenService';
 import { getCurrentLanguageId } from '../i18n';
 import { liveTrackingBibsParam } from '../utils/liveMapBibs';
+import { fetchWithTimeout, FetchTimeoutError, parseRetryAfter } from '../utils/fetchWithTimeout';
+import { AppError } from './api';
+
+// ✅ Deadline for one live-map request (app audit 2026-11-26). Android fetch
+// has no timeout of its own: a hung first load left the spinner up forever
+// with no retry, and a hung auto refresh kept "Loading participants" over the
+// map for good. Same order as API_CONFIG.TIMEOUT (15 s) plus headroom for the
+// server's RaceResult call on a cache miss.
+export const LIVE_TRACKING_TIMEOUT_MS = 20000;
+
+/**
+ * The fetch() failure → the AppError the rest of the app understands
+ * (same types as api.ts's handleError), so useScreenError shows the right
+ * copy and the screen can tell "rate limited, wait" from "offline".
+ * Before, every failure was a plain Error → always the generic server error.
+ */
+export function liveTrackingError(status: number | null, body: any, retryAfterHeader?: string | null): AppError {
+    const code = String(body?.error ?? body?.code ?? (status ? `http_${status}` : 'network_error')).toLowerCase();
+    if (status === null) return new AppError('network', 'network_error');
+    if (status === 401 || code === 'unauthorized' || code === 'session_expired') return new AppError('server', 'session_expired');
+    if (status === 429) return new AppError('server', code, { rateLimited: true, retryAfter: parseRetryAfter(retryAfterHeader) });
+    if (status === 404) return new AppError('empty', code);
+    return new AppError('server', code);
+}
 
 export interface LiveTrackingCheckpoint {
     name: string;
@@ -129,6 +153,12 @@ class LiveTrackingService {
         try {
             const token = await tokenService.getToken();
             const languageId = getCurrentLanguageId();
+            // ✅ X-Device-Id: the server's rate limit is per PHONE (ApiSecurity
+            // rate_scope_field), not per venue IP, where it knows the device.
+            // A header, not a body field: the response cache is keyed on the
+            // body, so it stays exactly as shared as before (app audit 2026-11-26).
+            // Never fail the map over it: no id → no header → today's per-IP bucket.
+            const deviceId = await getDeviceId().catch(() => '');
             
             const requestBody: any = {
                 language_id: languageId,
@@ -153,23 +183,39 @@ class LiveTrackingService {
 
             console.log('📡 Live tracking request:', requestBody);
             
-            const response = await fetch(getApiEndpoint(API_CONFIG.ENDPOINTS.GET_LIVE_TRACKING), {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`,
-                },
-                body: JSON.stringify(requestBody),
-            });
+            let response: Response;
+            try {
+                response = await fetchWithTimeout(getApiEndpoint(API_CONFIG.ENDPOINTS.GET_LIVE_TRACKING), {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`,
+                        ...(deviceId ? { 'X-Device-Id': deviceId } : {}),
+                    },
+                    body: JSON.stringify(requestBody),
+                }, LIVE_TRACKING_TIMEOUT_MS);
+            } catch (e) {
+                // No answer at all (offline, DNS, timeout): a network error.
+                if (e instanceof FetchTimeoutError) console.log('⏱️ Live tracking request timed out');
+                throw liveTrackingError(null, null);
+            }
 
             if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                let body: any = null;
+                try { body = await response.json(); } catch { /* not JSON */ }
+                throw liveTrackingError(response.status, body, response.headers?.get?.('Retry-After'));
             }
 
             const data: LiveTrackingResponse = await response.json();
             
             if (!data.success) {
-                throw new Error(data.error || 'Failed to fetch live tracking data');
+                throw liveTrackingError(200, data);
+            }
+
+            // ✅ A success with no participants array (never sent today, but a
+            // `null` would crash the screen on .length) reads as "nobody yet".
+            if (data.data && !Array.isArray(data.data.participants)) {
+                data.data.participants = [];
             }
 
             return data;

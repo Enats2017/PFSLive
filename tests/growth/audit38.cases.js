@@ -61,12 +61,12 @@ module.exports = ({ M, load, test, SRC }) => {
   test('Home: all 9 popups pass their wrapper\'s padding to the cap (compact 8+8, normal 20+20) and go compact on a short screen — no icon, 520 wide, tighter gaps, buttons side by side', () => {
     const h = read('screens/HomeScreen.tsx');
     const count = (re) => (h.match(re) || []).length;
-    assert.strictEqual(count(/<ModalScroll style=\{\[homeStyles\.notifScroll, compactPopups && homeStyles\.notifScrollCompact\]\} reserve=\{compactPopups \? 16 : 40\}>/g), 9);
-    assert.strictEqual(count(/homeStyles\.notifWrapper, compactPopups && homeStyles\.notifWrapperCompact/g), 9);
-    assert.strictEqual(count(/homeStyles\.notifCard, compactPopups && homeStyles\.notifCardCompact/g), 9);
-    assert.strictEqual(count(/homeStyles\.notifIconWrapper[^\]]*compactPopups && homeStyles\.hideCompact/g), 9, 'every icon hidden');
-    assert.strictEqual(count(/homeStyles\.notifButtonContainer, compactPopups && homeStyles\.notifButtonRowCompact/g), 9);
-    assert.strictEqual(count(/compactPopups && homeStyles\.notifButtonCompact\]/g), 19, 'every button');
+    assert.strictEqual(count(/<ModalScroll style=\{\[homeStyles\.notifScroll, compactPopups && homeStyles\.notifScrollCompact\]\} reserve=\{compactPopups \? 16 : 40\}>/g), 10);   // +1 2026-11-26: Home's "log in again" popup (same skeleton as the others)
+    assert.strictEqual(count(/homeStyles\.notifWrapper, compactPopups && homeStyles\.notifWrapperCompact/g), 10);
+    assert.strictEqual(count(/homeStyles\.notifCard, compactPopups && homeStyles\.notifCardCompact/g), 10);
+    assert.strictEqual(count(/homeStyles\.notifIconWrapper[^\]]*compactPopups && homeStyles\.hideCompact/g), 10, 'every icon hidden');
+    assert.strictEqual(count(/homeStyles\.notifButtonContainer, compactPopups && homeStyles\.notifButtonRowCompact/g), 10);
+    assert.strictEqual(count(/compactPopups && homeStyles\.notifButtonCompact\]/g), 21, 'every button');   // +2: Log in / Later
     assert.ok(/homeStyles\.notifTitle, compactPopups && homeStyles\.notifTitleClearClose/.test(h), 'notification title clear of the ✕');
     // landscape (phone or tablet) or a short window — device test 2026-10-23
     assert.ok(/const compactPopups = isCompactPopup\(popupWindow\.width, popupWindow\.height\);/.test(h));

@@ -1,5 +1,5 @@
 import { apiClient } from './api';
-import { API_CONFIG, getApiEndpoint } from '../constants/config';
+import { API_CONFIG, getApiEndpoint, getDeviceId } from '../constants/config';
 
 export interface Participant {
   participant_app_id: string;
@@ -64,7 +64,10 @@ export const participantService = {
       }
 
       const url = getApiEndpoint(API_CONFIG.ENDPOINTS.PARTICIPANTS);
-      const headers = await API_CONFIG.getHeaders();
+      // ✅ X-Device-Id: per-phone rate limit on the server (ApiSecurity
+      // rate_scope_field), not per venue IP; a header so the shared response
+      // cache (keyed on the body) is unchanged (app audit 2026-11-26).
+      const headers = { ...(await API_CONFIG.getHeaders()), 'X-Device-Id': await getDeviceId() };
 
       const requestBody: Record<string, any> = {
         product_app_id,

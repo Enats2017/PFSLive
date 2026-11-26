@@ -42,7 +42,7 @@ module.exports = ({ M, load, test, SRC }) => {
   test('every popup with an icon section (9 Home popups, fan e-mail, follow-notification prompt) uses the landscape rule and hides the icon when compact', () => {
     const h = read('screens/HomeScreen.tsx');
     assert.ok(/const compactPopups = isCompactPopup\(popupWindow\.width, popupWindow\.height\);/.test(h), 'Home');
-    assert.strictEqual((h.match(/homeStyles\.notifIconWrapper[^\]]*compactPopups && homeStyles\.hideCompact/g) || []).length, 9, 'every Home icon');
+    assert.strictEqual((h.match(/homeStyles\.notifIconWrapper[^\]]*compactPopups && homeStyles\.hideCompact/g) || []).length, 10, 'every Home icon');   // +1 2026-11-26: Home's "log in again" popup (same skeleton as the others)
     const fe = read('components/Fanemailmodal.tsx');
     assert.ok(/const compact = isCompactPopup\(popupWindow\.width, popupWindow\.height\);/.test(fe), 'fan e-mail');
     assert.ok(/homeStyles\.notifIconWrapper, compact && homeStyles\.hideCompact/.test(fe));
@@ -92,7 +92,7 @@ module.exports = ({ M, load, test, SRC }) => {
           const popups = all.filter((n) => n.type === 'Modal' && n.props.supportedOrientations);
           const icons = all.filter((n) => n.props && names(n.props.style).some((s) => /notifIconWrapper$/.test(s)));
           const hidden = icons.filter((n) => names(n.props.style).some((s) => /hideCompact$/.test(s)));
-          const want = os === 'android' ? 9 : 8;                 // battery popup: Android only
+          const want = os === 'android' ? 10 : 9;                // battery popup: Android only; +1 2026-11-26 "log in again"
           if (popups.length !== want || icons.length !== want) bad.push(`${os} ${name}: ${popups.length} popups, ${icons.length} icons (want ${want})`);
           if (hidden.length !== (land ? icons.length : 0)) bad.push(`${os} ${name}: ${hidden.length}/${icons.length} icons hidden`);
           // the fan e-mail popup sits on Home as its own component — render it too

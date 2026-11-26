@@ -35,7 +35,9 @@ module.exports = ({ test }) => {
     // Android: SSAID first; iOS: the IDFV (upper case); else the generated fallback.
     assert.ok(/Application\.getAndroidId\(\)/.test(src), 'Android uses SSAID');
     assert.ok(/getIosIdForVendorAsync\(\)/.test(src), 'iOS uses the IDFV');
-    const tpl = src.match(/id = (`gen_\$\{[^`]+`);/);
+    // The generator now sits in a const in getDeviceId (app audit 2026-11-26: a generated stand-in
+    // is kept for the session); the same expression is still run below.
+    const tpl = src.match(/(?:id|const g) = (`gen_\$\{[^`]+`);/);
     assert.ok(tpl, 'generated fallback found');
     // eslint-disable-next-line no-new-func
     const gen = new Function(`return ${tpl[1]};`);

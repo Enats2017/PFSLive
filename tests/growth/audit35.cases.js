@@ -63,7 +63,7 @@ module.exports = ({ M, load, test, SRC }) => {
     assert.ok(/flexGrow: 1, justifyContent: 'center'/.test(ms), 'short cards stay centred');
     assert.ok(/<ModalScroll\b/.test(files['components/ui/Dialog.tsx']), 'Dialog (device transfer, e-mail change) through the shared component');
     const home = files['screens/HomeScreen.tsx'];
-    assert.strictEqual((home.match(/<ModalScroll style=\{\[homeStyles\.notifScroll, compactPopups && homeStyles\.notifScrollCompact\]\}[^>]*>/g) || []).length, 9, 'all 9 Home popups (compact in landscape)');
+    assert.strictEqual((home.match(/<ModalScroll style=\{\[homeStyles\.notifScroll, compactPopups && homeStyles\.notifScrollCompact\]\}[^>]*>/g) || []).length, 10, 'all 10 Home popups (compact in landscape)');   // +1 2026-11-26: Home's "log in again" popup (same skeleton as the others)
   });
 
   test('tap outside closes: the full-screen wrappers let touches through to their backdrop (pointerEvents box-none)', () => {

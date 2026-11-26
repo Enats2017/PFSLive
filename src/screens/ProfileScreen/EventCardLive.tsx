@@ -26,9 +26,11 @@ interface EventCardProps {
     item: AthleteEvent;
     isOwnProfile?: boolean;
     onDelete?: (event: AthleteEvent) => void;
+    // ✅ This card's race is the live tracking session (audit 2026-11-26).
+    isTrackedNow?: boolean;
 }
 
-export const EventCard = React.memo(({ item, isOwnProfile = true, onDelete }: EventCardProps) => {
+export const EventCard = React.memo(({ item, isOwnProfile = true, onDelete, isTrackedNow = false }: EventCardProps) => {
     const { t } = useTranslation(['profile']);
     const navigation = useNavigation<NavigationProp>();
     // ✅ Own profile: three 48pt icon buttons beside the info left it ~88pt at
@@ -42,7 +44,7 @@ export const EventCard = React.memo(({ item, isOwnProfile = true, onDelete }: Ev
 
     const handleEditPress = useCallback(() => {
         if (item.event_source === 'custom') {
-            navigation.navigate('EditPersonalEvent', { eventId: item.id });
+            navigation.navigate('EditPersonalEvent', { eventId: item.id, participantId: item.participant_app_id });
         } else {
             navigation.navigate('EventDetails', {
                 product_app_id: item.id,
@@ -72,8 +74,12 @@ export const EventCard = React.memo(({ item, isOwnProfile = true, onDelete }: Ev
         onDelete?.(item);
     }, [item, onDelete]);
 
-    const canDelete = item.event_source === 'custom' && item.can_delete === 1 && !!onDelete;
-    const showEdit = showEditButton(item);
+    // ✅ Not while it is being tracked (audit 2026-11-26): the server locks only
+    // after 10 tracked minutes, so in the first ones (or offline, nothing
+    // uploaded yet) a delete left the engine sending fixes that were dropped,
+    // and an edit changed date / time / route under the running session.
+    const canDelete = item.event_source === 'custom' && item.can_delete === 1 && !!onDelete && !isTrackedNow;
+    const showEdit = showEditButton(item) && !(item.event_source === 'custom' && isTrackedNow);
 
     const trackingLabel = useCallback((): string => {
         switch (item.race_status) {

@@ -47,6 +47,27 @@ export interface NotificationData {
   tracking_source?: string;   // 'rr' | 'gps'
 }
 
+// ✅ Taps already routed, by notification id — module-level so a remount of the
+// hook (or the cold-start read below racing the listener) never routes the
+// same tap twice.
+const handledResponseIds = new Set<string>();
+const responseIdOf = (response: any): string | null => {
+  const id = response?.notification?.request?.identifier;
+  return typeof id === "string" && id !== "" ? id : null;
+};
+
+// The tap has been routed: forget it natively too, so a later read (remount,
+// JS reload after an OTA update) does not hand it back.
+const clearLastResponse = () => {
+  try {
+    if (typeof Notifications?.clearLastNotificationResponse === "function") {
+      void Promise.resolve(Notifications.clearLastNotificationResponse()).catch(() => { /* older native: no-op */ });
+    } else if (typeof Notifications?.clearLastNotificationResponseAsync === "function") {
+      void Promise.resolve(Notifications.clearLastNotificationResponseAsync()).catch(() => { /* older native: no-op */ });
+    }
+  } catch { /* best effort */ }
+};
+
 // ✅ Hook interface
 interface UseNotificationsReturn {
   expoPushToken: string | null;
@@ -72,11 +93,20 @@ export function useNotifications(): UseNotificationsReturn {
   // ✅ Use a ref to store the tap handler — useState cannot store functions
   // directly because React treats a function argument as an initializer.
   const onNotificationTapRef = useRef<((data: NotificationData) => void) | null>(null);
+  // A tap that arrived before a handler was registered (cold start: this hook's
+  // effect reads the launch tap BEFORE HomeScreen's own effect registers its
+  // handler). Delivered the moment one is.
+  const pendingTapRef = useRef<NotificationData | null>(null);
 
   const setOnNotificationTap = useCallback((
     handler: ((data: NotificationData) => void) | null
   ) => {
     onNotificationTapRef.current = handler;
+    if (handler && pendingTapRef.current) {
+      const data = pendingTapRef.current;
+      pendingTapRef.current = null;
+      try { handler(data); } finally { clearLastResponse(); }
+    }
   }, []);
 
   // Foreground — store notification so the screen can show a popup
@@ -94,6 +124,14 @@ export function useNotifications(): UseNotificationsReturn {
   // Background/killed tap — fire the registered handler immediately
   const handleNotificationResponse = useCallback((response: any) => {
     if (!isNotificationsAvailable) return;
+    if (!response?.notification?.request?.content) return;
+
+    // Once per tap: the listener and the cold-start read can both deliver it.
+    const responseId = responseIdOf(response);
+    if (responseId !== null) {
+      if (handledResponseIds.has(responseId)) return;
+      handledResponseIds.add(responseId);
+    }
 
     const { data, title } = response.notification.request.content;
 
@@ -113,7 +151,9 @@ export function useNotifications(): UseNotificationsReturn {
     void analyticsService.logNotificationOpened(data?.type ?? "unknown", data?.race_id);
 
     if (data?.race_id && data?.event_name && onNotificationTapRef.current) {
-      onNotificationTapRef.current(data as NotificationData);
+      try { onNotificationTapRef.current(data as NotificationData); } finally { clearLastResponse(); }
+    } else if (data?.race_id && data?.event_name) {
+      pendingTapRef.current = data as NotificationData;   // see pendingTapRef
     }
   }, []);
 
@@ -163,6 +203,22 @@ export function useNotifications(): UseNotificationsReturn {
       responseListener.current = Notifications.addNotificationResponseReceivedListener(
         handleNotificationResponse
       );
+
+      // ✅ Cold start (audit 2026-11-26 #2): a tap that LAUNCHED the app is
+      // emitted natively when the module is created — long before this
+      // listener exists — and was dropped, so the fan landed on Home instead of
+      // the result / live map. expo-notifications keeps it as the "last
+      // response": read it now that the listener is attached (deduped by id).
+      try {
+        const read = typeof Notifications.getLastNotificationResponse === "function"
+          ? Notifications.getLastNotificationResponse()
+          : typeof Notifications.getLastNotificationResponseAsync === "function"
+            ? Notifications.getLastNotificationResponseAsync()
+            : null;
+        void Promise.resolve(read).then((last: any) => {
+          if (isMounted && last) handleNotificationResponse(last);
+        }).catch(() => { /* no launch tap */ });
+      } catch { /* older native: listener only */ }
     }
 
     return () => {

@@ -56,7 +56,12 @@
       "message": "{applicationName} shares your live position with your followers during a race, even when the app is closed or not in use. To enable this, please choose \"{backgroundPermissionOptionLabel}\".",
       "positiveAction": "Change to \"{backgroundPermissionOptionLabel}\"",
       "negativeAction": "Cancel"
-    }
+    },
+    "stopping": "Stopping…",
+    "stopInProgressTitle": "Still stopping",
+    "stopInProgressBody": "Last positions still sending. Try again soon.",
+    "previousDayStoppedTitle": "Earlier day stopped",
+    "previousDayStoppedBody": "Press Start to track today's race."
   },
   "battery": {
     "title": "Enable background tracking",
@@ -195,5 +200,12 @@
     "earlyBody": "Open Livio once now so tracking is ready at the start. Then lock your phone again.",
     "notSendingTitle": "Livio can't send your position",
     "notSendingBody": "Your race is being recorded, but Livio has had no internet connection for 20 minutes, so your followers can't see you. Check that mobile data (and data roaming abroad) is on. Everything recorded is sent as soon as the connection is back."
+  },
+  "auth": {
+    "expiredTitle": "Please log in again",
+    "expiredTrackingBody": "Your login is no longer valid. Livio keeps recording your race, but your followers only see your positions again once you log in.",
+    "expiredBody": "Your login is no longer valid, so you have been logged out. Log in again to track your races.",
+    "logIn": "Log in",
+    "later": "Later"
   }
 }

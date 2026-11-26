@@ -15,6 +15,7 @@ import { forgotStyles } from '../../../styles/forgetPassword.styles';
 import { commonStyles, palette } from '../../../styles/common.styles';
 import { analyticsService } from '../../../services/analyticsService';
 import { Button } from '../../../components/ui';
+import { tryBeginSubmit, endSubmit } from '../../../services/authFlowGuards';
 
 // ─── Constants ───────────────────────────────────────────────────
 const OTP_LENGTH = 6;
@@ -45,6 +46,10 @@ const OtpStep: React.FC<OtpStepProps> = ({
     const [resending, setResending] = useState(false);
     const [countdown, setCountdown] = useState(INITIAL_COUNTDOWN);
     const [canResend, setCanResend] = useState(false);
+    // ✅ Synchronous one-at-a-time gates (audit 2026-11-26, finding 9): the 6th
+    // digit auto-submits next to the Verify button, and a resend mints a new code.
+    const verifyingRef = useRef(false);
+    const resendingRef = useRef(false);
 
     const inputRefs = useRef<TextInput[]>([]);
 
@@ -127,6 +132,7 @@ const OtpStep: React.FC<OtpStepProps> = ({
             setError(t('otp:errors.incomplete'));
             return;
         }
+        if (!tryBeginSubmit(verifyingRef)) return;
 
         setLoading(true);
         setError('');
@@ -150,12 +156,14 @@ const OtpStep: React.FC<OtpStepProps> = ({
             handleError(code, err);
         } finally {
             setLoading(false);
+            endSubmit(verifyingRef);
         }
     }, [otp, verificationToken, onNext, handleError, t]);
 
     // ── Resend OTP ───────────────────────────────────────────────
     const handleResend = useCallback(async () => {
         if (!canResend || resending) return;
+        if (!tryBeginSubmit(resendingRef)) return;
 
         setResending(true);
         setError('');
@@ -177,6 +185,7 @@ const OtpStep: React.FC<OtpStepProps> = ({
             handleError(err.response?.data?.error ?? 'unknown_error', err);
         } finally {
             setResending(false);
+            endSubmit(resendingRef);
         }
     }, [canResend, resending, verificationToken, onResend, handleError]);
 

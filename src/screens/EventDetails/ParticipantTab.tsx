@@ -14,6 +14,7 @@ import { commonStyles, spacing, palette, space } from '../../styles/common.style
 import { detailsHeaderImageLandscape, detailsHeaderImageFit } from '../../utils/screenFit';
 import SearchInput from '../../components/SearchInput';
 import { participantService, Participant } from '../../services/participantService';
+import { rememberBibOwners } from '../../utils/followStorage';
 import { API_CONFIG } from '../../constants/config';
 import ParticipantCard from './ParticipantCard';
 import { useFollowManager } from '../../hooks/useFollowManager';
@@ -95,6 +96,10 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id, event_i
           page: pageNum,
           filter_name: search,
         });
+        // ✅ bib → athlete links for followed bibs, so an athlete unfollow on
+        // another screen drops this event's bib follow too (followStorage,
+        // audit 2026-11-26 FN1). Fire-and-forget; only followed bibs are kept.
+        void rememberBibOwners(productId, result.participants as any[]);
 
         setParticipants((prev) => {
           if (pageNum === 1) {

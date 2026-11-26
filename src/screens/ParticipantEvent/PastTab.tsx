@@ -35,6 +35,20 @@ const PastTab: React.FC<PastTabProps> = ({ events, onLoadMore, loadingMore, hasM
     const [searchPagination, setSearchPagination] = useState({ page: 1, total_pages: 1 });
     const isLoadingMoreSearch = useRef(false);
     const [loadingMoreSearch, setLoadingMoreSearch] = useState(false);
+    // ✅ (app audit 2026-11-26, same fix as FollowerEventList/PastTab) Newest
+    // search wins: an older query answering last replaced the newer results,
+    // and a page 2 of an old query was appended to a new one. Bumped by every
+    // change of the search text.
+    const searchId = useRef(0);
+    // The search pagination, readable synchronously. loadMoreSearchResults
+    // used to read it from inside a setState updater and assumed that ran at
+    // once; when React deferred it, page and total stayed 0 and "load more"
+    // silently did nothing.
+    const searchPaginationRef = useRef({ page: 1, total_pages: 1 });
+    const setSearchPage = (v: { page: number; total_pages: number }) => {
+        searchPaginationRef.current = v;
+        setSearchPagination(v);
+    };
     
     // DEBOUNCED SEARCH
     useEffect(() => {
@@ -43,11 +57,16 @@ const PastTab: React.FC<PastTabProps> = ({ events, onLoadMore, loadingMore, hasM
             
         }
 
+        const id = ++searchId.current;
         if (searchText.trim().length === 0) {
             setSearchResults([]);
-            setSearchPagination({ page: 1, total_pages: 1 });
+            setSearchPage({ page: 1, total_pages: 1 });
+            setSearching(false);
             return;
         }
+
+        isLoadingMoreSearch.current = false;
+        setSearchPage({ page: 1, total_pages: 1 });
 
         debounceTimer.current = setTimeout(async () => {
             try {
@@ -56,8 +75,9 @@ const PastTab: React.FC<PastTabProps> = ({ events, onLoadMore, loadingMore, hasM
                     page_past: 1,
                     filter_name_past: searchText,
                 });
+                if (id !== searchId.current) return;   // a newer search owns the list
                 setSearchResults(result.tabs.past);
-                setSearchPagination({
+                setSearchPage({
                     page: 1,
                     total_pages: result.pagination?.past?.total_pages ?? 1,
                 });
@@ -73,7 +93,7 @@ const PastTab: React.FC<PastTabProps> = ({ events, onLoadMore, loadingMore, hasM
             } catch (error) {
                 console.log('❌ Search failed:', error);
             } finally {
-                setSearching(false);
+                if (id === searchId.current) setSearching(false);
             }
         }, 500);
 
@@ -89,14 +109,9 @@ const PastTab: React.FC<PastTabProps> = ({ events, onLoadMore, loadingMore, hasM
 
      const loadMoreSearchResults = useCallback(async () => {
             if (isLoadingMoreSearch.current) return;
-            let currentPage = 0;
-            let totalPages = 0;
-            setSearchPagination(prev => {
-                currentPage = prev.page;
-                totalPages = prev.total_pages;
-                console.log('Past search pagination:', { currentPage: prev.page, totalPages: prev.total_pages });
-                return prev;
-            });
+            const currentPage = searchPaginationRef.current.page;
+            const totalPages = searchPaginationRef.current.total_pages;
+            const id = searchId.current;
     
             if (currentPage >= totalPages) {
                 console.log('No more past search pages');
@@ -112,6 +127,7 @@ const PastTab: React.FC<PastTabProps> = ({ events, onLoadMore, loadingMore, hasM
                     page_past: nextPage,
                     filter_name_past: searchText,
                 });
+                if (id !== searchId.current) return;   // the query changed meanwhile
     
                 console.log(`Past search page ${nextPage} loaded:`, result.tabs.past.length);
                 setSearchResults(prev => {
@@ -119,7 +135,7 @@ const PastTab: React.FC<PastTabProps> = ({ events, onLoadMore, loadingMore, hasM
                     const newItems = result.tabs.past.filter(i => !ids.has(i.product_app_id));
                     return [...prev, ...newItems];
                 });
-                setSearchPagination({
+                setSearchPage({
                     page: nextPage,
                     total_pages: result.pagination?.past?.total_pages ?? totalPages,
                 });

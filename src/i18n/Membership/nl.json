@@ -4,12 +4,13 @@
     "title": "Kies je abonnement",
     "subtitle": "Blijf je atleten live volgen."
   },
- "infoBanner": {
+  "infoBanner": {
     "text": "Een abonnement is nodig om je in te schrijven en je race op de wedstrijddag live te volgen. Kies een abonnement om te starten.",
     "hasSessionsLeft": "Je hebt nog {{count}} sessies over. Upgrade op elk moment om meer sessies te krijgen.",
     "noSessionsLeft": "Je hebt al je sessies gebruikt. Upgrade je abonnement om je races te blijven volgen.",
     "webMembership": "Je hebt een actief webabonnement. Beheer dit via de website.",
-    "grace": "Je betaling wordt verwerkt. De toegang wordt binnenkort hervat."
+    "grace": "Je betaling wordt verwerkt. De toegang wordt binnenkort hervat.",
+    "paymentPending": "Je betaling is ontvangen en je aankoop wordt geactiveerd. Dit duurt meestal enkele minuten."
   },
   "sessions": {
     "unlimited": "Onbeperkt",
@@ -107,6 +108,39 @@
     "successTitle": "Alles is klaar!",
     "successBody": "Je lidmaatschap is actief. Veel plezier met het volgen van je atleten!",
     "errorTitle": "Er is iets misgegaan",
-    "errorBody": "We konden je aankoop niet verifiëren. Probeer het opnieuw of neem contact op."
+    "errorBody": "We konden je aankoop niet verifiëren. Probeer het opnieuw of neem contact op.",
+    "unconfirmedBody": "Apple heeft je betaling ontvangen, maar we konden ze nog niet bevestigen. Koop niet opnieuw: we proberen het automatisch opnieuw en je aankoop wordt aan je account toegevoegd. Verschijnt ze niet binnen een dag, neem dan contact op via info@liviolive.com.",
+    "otherAccountBody": "Dit abonnement hoort bij een ander Livio-account. Log in met dat account of neem contact op via info@liviolive.com.",
+    "creditedOtherBody": "Deze aankoop is gedaan vanuit een ander Livio-account en is aan dat account toegevoegd."
+  },
+  "restorePending": {
+    "title": "Aankoop wordt geactiveerd",
+    "message": "We hebben je aankoop gevonden. Ze wordt geactiveerd en verschijnt binnen enkele minuten in je profiel."
+  },
+  "restoreOtherAccount": {
+    "title": "Gekoppeld aan een ander account",
+    "message": "Dit abonnement hoort bij een ander Livio-account. Log in met dat account of neem contact op via info@liviolive.com."
+  },
+  "unconfirmed": {
+    "title": "Betaling wordt nog bevestigd",
+    "message": "Apple heeft een betaling van je ontvangen die we nog bevestigen. Wacht tot ze aan je account is toegevoegd voor je een nieuwe koopt.",
+    "banner": "We bevestigen nog een betaling die Apple van je ontving. Je hoeft niet opnieuw te kopen.",
+    "retry": "Nu opnieuw controleren",
+    "retryDoneTitle": "Betaling bevestigd",
+    "retryDoneMessage": "Je betaling is bevestigd en aan je account toegevoegd.",
+    "retryStillTitle": "Wordt nog bevestigd",
+    "retryStillMessage": "We konden je betaling nog niet bevestigen. We proberen het automatisch opnieuw - je hoeft niet opnieuw te kopen."
+  },
+  "paymentPending": {
+    "title": "Aankoop wordt geactiveerd",
+    "message": "Je vorige aankoop wordt nog geactiveerd. Wacht enkele minuten voor je opnieuw koopt."
+  },
+  "pendingApproval": {
+    "title": "Wacht op goedkeuring",
+    "message": "Je aankoop wacht op goedkeuring (bijvoorbeeld 'Vraag om te kopen'). Er is nog niets aangerekend. Ze wordt toegevoegd zodra ze is goedgekeurd."
+  },
+  "restoreCreditedOther": {
+    "title": "Toegevoegd aan een ander account",
+    "message": "Deze aankoop is gedaan vanuit een ander Livio-account en is aan dat account toegevoegd."
   }
 }

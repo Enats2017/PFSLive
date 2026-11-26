@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Modal,
   StyleSheet,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -24,7 +25,11 @@ import ErrorModal from '../../components/ErrorModal';
 import { participantService, Participant } from '../../services/participantService';
 import { eventDetailService, RaceResultData } from '../../services/eventDetailService';
 import { API_CONFIG } from '../../constants/config';
-import { clearPendingRegistration } from '../../hooks/usePendingRegistration';
+import { clearPendingRegistration, savePendingRegistration } from '../../hooks/usePendingRegistration';
+import { tokenService } from '../../services/tokenService';
+import { useAuth } from '../../context/AuthContext';
+import RegistrationModal from '../../components/RegistrationModal';
+import { classifyCallError, thisIsMeOutcome } from './registrationFlow';
 import { getCurrentLanguageId } from '../../i18n';
 import ErrorScreen from '../../components/ErrorScreen';
 import { useScreenError } from '../../hooks/useApiError';
@@ -86,6 +91,24 @@ const ParticipantResult = () => {
   const [errorModalVisible, setErrorModalVisible] = useState(false);
   const [errorTitleKey, setErrorTitleKey] = useState('');
   const [errorMessageKey, setErrorMessageKey] = useState('');
+  // ✅ Close the screen with the error only when it cannot work at all (missing
+  // params). Every error closed it before (audit M5): a Confirm that timed out
+  // after the e-mail had gone lost the screen, and the repeat sent another mail.
+  const [errorLeaves, setErrorLeaves] = useState(false);
+
+  // ✅ membership_required / limit_reached / membership_upcoming get the
+  // membership popup (audit M4) - they used to read "You are already
+  // registered for this event", the opposite of the truth.
+  const [membershipModal, setMembershipModal] = useState<{
+    status: 'membership_required' | 'limit_reached' | 'membership_upcoming';
+    limit?: number;
+    startDate?: string;
+  } | null>(null);
+
+  // ✅ One "This is me" / Confirm call at a time (audit L2): the disabled prop
+  // only applies after a re-render.
+  const inFlightRef = useRef(false);
+  const { logout } = useAuth();
 
   const debounceTimer = useRef<NodeJS.Timeout | null>(null);
   const searchInputRef = useRef<any>(null);
@@ -96,16 +119,49 @@ const ParticipantResult = () => {
     if (!product_app_id || !product_option_value_app_id) {
       showErrorModal(
         'participantResult:error.missingParamsTitle',
-        'participantResult:error.missingParamsMessage'
+        'participantResult:error.missingParamsMessage',
+        true
       );
     }
   }, [product_app_id, product_option_value_app_id]);
 
-  const showErrorModal = useCallback((titleKey: string, messageKey: string) => {
+  const showErrorModal = useCallback((titleKey: string, messageKey: string, leave: boolean = false) => {
     setErrorTitleKey(titleKey);
     setErrorMessageKey(messageKey);
+    setErrorLeaves(leave);
     setErrorModalVisible(true);
   }, []);
+
+  // ✅ A 401 is THROWN as session_expired (api.ts) - the 'unauthorized'
+  // actions below never arrive (audit H1), and the catch said "network error"
+  // with no way out. Same as useRegistrationHandler.handleUnauthorized, and the
+  // Connect is kept so the login brings the runner back to this event.
+  // Saved AFTER the logout, which clears any pending Connect (see
+  // useRegistrationHandler.handleUnauthorized).
+  const handleSessionExpired = useCallback(async () => {
+    await tokenService.removeToken();
+    await logout();
+    if (product_app_id && product_option_value_app_id) {
+      await savePendingRegistration(product_app_id, product_option_value_app_id, params?.event_name ?? '');
+    }
+    setTimeout(() => {
+      navigation.reset({ index: 0, routes: [{ name: 'LoginScreen' }] });
+    }, 50);
+  }, [product_app_id, product_option_value_app_id, params?.event_name, logout, navigation]);
+
+  /** Network vs server vs session for a thrown call error. */
+  const showCallError = useCallback(async (error: unknown) => {
+    const failure = classifyCallError(error);
+    if (failure === 'session_expired') {
+      await handleSessionExpired();
+      return;
+    }
+    if (failure === 'server') {
+      showErrorModal('participantResult:error.registrationFailedTitle', 'participantResult:error.registrationFailedMessage');
+    } else {
+      showErrorModal('participantResult:error.networkErrorTitle', 'participantResult:error.networkErrorMessage');
+    }
+  }, [handleSessionExpired, showErrorModal]);
 
   const invalidateEventCache = useCallback(async () => {
     if (!product_app_id) return;
@@ -115,6 +171,26 @@ const ParticipantResult = () => {
       if (API_CONFIG.DEBUG) console.error('⚠️ Failed to invalidate cache:', error);
     }
   }, [product_app_id]);
+
+  // ✅ The server registered straight away ('registered': an event with no Race
+  // Result / table match path inserts at once, also on "This is me" and on the
+  // e-mail Confirm). Same success handling as the event screen's confirm:
+  // pending Connect cleared, event cache refreshed, runner told, and back to
+  // the event, which refetches on focus and shows Undo.
+  const handleRegisteredHere = useCallback(async () => {
+    setConfirmModalVisible(false);
+    setConfirmData(null);
+    setSelectedParticipant(null);
+    await clearPendingRegistration();
+    await invalidateEventCache();
+    await analyticsService.markAsParticipant('register');
+    void analyticsService.logRegisterStep('completed', undefined, analyticsRaceName);
+    // ✅ Alert, not a toast: this text (written for DistanceTab's success popup) needs 9-10 lines on a
+    // 320 pt phone at larger text — the toast caps a message at 8 (tests/ui_orientation/group2). The
+    // OS draws an Alert in full in both orientations, and it stays up over the event we go back to.
+    Alert.alert(t('details:success.label'), t('details:success.message'));
+    navigation.goBack();
+  }, [invalidateEventCache, analyticsRaceName, t, navigation]);
 
   const fetchParticipants = useCallback(
     async (pageNum: number, search: string) => {
@@ -208,6 +284,9 @@ const ParticipantResult = () => {
         return;
       }
 
+      if (inFlightRef.current) return;
+      inFlightRef.current = true;
+
       try {
         setRegisterLoading(true);
         setRegisteringId(participantService.getParticipantId(participant));
@@ -222,43 +301,53 @@ const ParticipantResult = () => {
 
         const action = result.action || 'unknown_error';
 
-        if (action === 'confirm_race_result') {
-          // ✅ Show confirm modal in email verification mode
-          setConfirmData(result.race_result_data ?? null);
-          setConfirmModalVisible(true);
-        } else if (!isSuccessAction(action)) {
-          switch (action) {
-            case 'already_registered':
-            case 'membership_required':
-            case 'limit_reached':
-              showErrorModal('participantResult:error.alreadyRegisteredTitle', 'participantResult:error.alreadyRegisteredMessage');
-              break;
-            case 'bib_number_invalid':
-            case 'not_found_in_race_result':
-              showErrorModal('participantResult:error.invalidBibTitle', 'participantResult:error.invalidBibMessage');
-              break;
-            case 'validation_error':
-            case 'missing_parameters':
-              showErrorModal('participantResult:error.validationErrorTitle', 'participantResult:error.validationErrorMessage');
-              break;
-            case 'unauthorized':
-            case 'token_invalid':
-            case 'token_expired':
-              navigation.navigate('LoginScreen');
-              break;
-            default:
+        // ✅ Mapping in registrationFlow.thisIsMeOutcome (tested).
+        switch (thisIsMeOutcome(action)) {
+          case 'confirm':
+            // ✅ Show confirm modal in email verification mode
+            setConfirmData(result.race_result_data ?? null);
+            setConfirmModalVisible(true);
+            break;
+          case 'registered':
+            await handleRegisteredHere();
+            break;
+          case 'email_sent':
+            await clearPendingRegistration();
+            setMailSentVisible(true);
+            break;
+          case 'membership':
+            setMembershipModal({
+              status: action as 'membership_required' | 'limit_reached' | 'membership_upcoming',
+              limit: result.membership_limit,
+              startDate: result.membership_start_date,
+            });
+            break;
+          case 'already_registered':
+            showErrorModal('participantResult:error.alreadyRegisteredTitle', 'participantResult:error.alreadyRegisteredMessage');
+            break;
+          case 'invalid_bib':
+            showErrorModal('participantResult:error.invalidBibTitle', 'participantResult:error.invalidBibMessage');
+            break;
+          case 'validation':
+            showErrorModal('participantResult:error.validationErrorTitle', 'participantResult:error.validationErrorMessage');
+            break;
+          default:
+            if (action === 'registration_in_progress') {
+              showErrorModal('details:error.inProgressTitle', 'details:error.inProgressMessage');
+            } else {
               showErrorModal('participantResult:error.registrationFailedTitle', 'participantResult:error.registrationFailedMessage');
-              break;
-          }
+            }
+            break;
         }
       } catch (error: any) {
-        showErrorModal('participantResult:error.networkErrorTitle', 'participantResult:error.networkErrorMessage');
+        await showCallError(error);
       } finally {
+        inFlightRef.current = false;
         setRegisterLoading(false);
         setRegisteringId(null);
       }
     },
-    [product_option_value_app_id, navigation, showErrorModal]
+    [product_option_value_app_id, showErrorModal, showCallError, handleRegisteredHere]
   );
 
   // ✅ Step 2: "Confirm" clicked in modal — sends verification email
@@ -267,6 +356,9 @@ const ParticipantResult = () => {
       showErrorModal('participantResult:error.invalidDataTitle', 'participantResult:error.invalidDataMessage');
       return;
     }
+
+    if (inFlightRef.current) return;
+    inFlightRef.current = true;
 
     try {
       setRegisterLoading(true);
@@ -289,12 +381,23 @@ const ParticipantResult = () => {
         setSelectedParticipant(null);
         await clearPendingRegistration();
         setMailSentVisible(true);
+      } else if (thisIsMeOutcome(action) === 'registered') {
+        // ✅ No Race Result path: the server inserted at once (review 2026-11-26).
+        await handleRegisteredHere();
       } else if (!isSuccessAction(action)) {
-        switch (action) {
-          case 'unauthorized':
-          case 'token_invalid':
-          case 'token_expired':
-            navigation.navigate('LoginScreen');
+        switch (thisIsMeOutcome(action)) {
+          case 'membership':
+            // ✅ Same popup as "This is me" (audit M4).
+            setConfirmModalVisible(false);
+            setMembershipModal({
+              status: action as 'membership_required' | 'limit_reached' | 'membership_upcoming',
+              limit: result.membership_limit,
+              startDate: result.membership_start_date,
+            });
+            break;
+          case 'already_registered':
+            setConfirmModalVisible(false);
+            showErrorModal('participantResult:error.alreadyRegisteredTitle', 'participantResult:error.alreadyRegisteredMessage');
             break;
           default:
             showErrorModal('participantResult:error.registrationFailedTitle', 'participantResult:error.registrationFailedMessage');
@@ -302,11 +405,14 @@ const ParticipantResult = () => {
         }
       }
     } catch (error: any) {
-      showErrorModal('participantResult:error.networkErrorTitle', 'participantResult:error.networkErrorMessage');
+      // ✅ The mail may have gone out before the timeout: the screen stays, and
+      // a repeat re-sends the SAME link (insert_participant_app_api, M5).
+      await showCallError(error);
     } finally {
+      inFlightRef.current = false;
       setRegisterLoading(false);
     }
-  }, [confirmData, product_option_value_app_id, navigation, showErrorModal]);
+  }, [confirmData, product_option_value_app_id, showErrorModal, showCallError, handleRegisteredHere]);
 
   const renderParticipant = useCallback(
     ({ item: participant }: { item: Participant }) => {
@@ -558,8 +664,19 @@ const ParticipantResult = () => {
         messageKey={errorMessageKey}
         onClose={() => {
           setErrorModalVisible(false);
-          navigation.goBack();
+          if (errorLeaves) navigation.goBack();
         }}
+      />
+
+      {/* ✅ Membership answers (audit M4) - the event screen's own popup, so the
+          text, and the plans button on iOS, are the ones runners already know. */}
+      <RegistrationModal
+        visible={membershipModal !== null}
+        status={membershipModal?.status ?? null}
+        distanceName={event_name}
+        membershipLimit={membershipModal?.limit}
+        membershipStartDate={membershipModal?.startDate}
+        onClose={() => setMembershipModal(null)}
       />
     </SafeAreaView>
   );

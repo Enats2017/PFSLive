@@ -101,7 +101,11 @@ test('ResultDetails picks the card through these helpers with the LIVE race stat
 test('useResultDetail polls through shouldPollResultDetail and re-evaluates on a runner status change', () => {
   const src = read('hooks', 'useResultDetail.ts');
   assert.ok(/shouldPollResultDetail\(\s*data\?\.event\?\.race_status,\s*effectiveParticipantStatus\(data\?\.race_info\?\.participant_status, data\?\.race_info\?\.has_started\)/.test(src));
-  assert.ok(/\[data\?\.event\?\.race_status, data\?\.race_info\?\.participant_status, data\?\.race_info\?\.has_started, fetchDetail\]/.test(src));
+  // isLive is computed from those three fields on every render and is the
+  // poll effect's dep (app audit 2026-11-26: + isFocused, polls only while the
+  // screen is on top) — a runner status change still re-evaluates the poll.
+  assert.ok(/const isLive = shouldPollResultDetail\(/.test(src));
+  assert.ok(/\[isLive, isFocused, fetchDetail\]/.test(src));
 });
 test('RaceLive labels a runner on course after end_time In progress and shows — without a server clock', () => {
   const src = read('screens', 'ResultDetailsScreen', 'RaceLive.tsx');

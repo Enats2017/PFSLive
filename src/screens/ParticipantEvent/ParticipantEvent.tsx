@@ -63,6 +63,19 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
     });
     const isInitialMount = useRef(true);
     const isFetching = useRef(false);
+    // ✅ (app audit 2026-11-26, same fix as FollowerEventList) The focus
+    // refetch — which also re-runs on every tab change — resets every tab to
+    // page 1. A load-more still in flight then appended page N after page 1
+    // and set the pagination to N, so pages 2..N-1 were never loaded. Each
+    // reset bumps listGeneration; a page asked for under an older one is
+    // dropped. The per-tab ref is the synchronous "already loading" guard (the
+    // state flag is seen stale by a second onEndReached in the same frame).
+    const listGeneration = useRef(0);
+    const loadingMoreTab = useRef({ past: false, live: false, upcoming: false });
+    // ✅ A page-1 refetch is running (re-audit 2026-11-26): a load-more started
+    // now would read the NEW generation but the OLD page number and append
+    // page N+1 right after the fresh page 1. It waits for the refetch instead.
+    const listRefetching = useRef(false);
     const { error, hasError, handleApiError, clearError } = useScreenError();
 
     useFocusEffect(
@@ -120,6 +133,8 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
             if (API_CONFIG.DEBUG) {
                 console.log('📡 Fetching events');
             }
+            listGeneration.current++;
+            listRefetching.current = true;
             const result = await eventService.getEvents({
                 page_past: 1,
                 page_live: 1,
@@ -157,14 +172,17 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
             handleApiError(error);
         } finally {
             setLoading(false);
+            listRefetching.current = false;
             isFetching.current = false;
         }
     }, [t]);
 
     const loadMorePast = useCallback(async () => {
-        if (loadingMorePast || paginationInfo.past.page >= paginationInfo.past.total_pages) {
+        if (loadingMorePast || loadingMoreTab.current.past || listRefetching.current || paginationInfo.past.page >= paginationInfo.past.total_pages) {
             return;
         }
+        const gen = listGeneration.current;
+        loadingMoreTab.current.past = true;
 
         try {
             setLoadingMorePast(true);
@@ -177,6 +195,7 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
             const result = await eventService.getEvents({
                 page_past: nextPage,
             });
+            if (gen !== listGeneration.current) return;   // the list was reset meanwhile
 
             setPastEvents((prev) => {
                 const existingIds = new Set(prev.map((e) => e.product_app_id));
@@ -201,14 +220,17 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
         } catch (error) {
             console.log('❌ Past: Load more failed:', error);
         } finally {
+            loadingMoreTab.current.past = false;
             setLoadingMorePast(false);
         }
     }, [loadingMorePast, paginationInfo.past.page, paginationInfo.past.total_pages]);
 
     const loadMoreLive = useCallback(async () => {
-        if (loadingMoreLive || paginationInfo.live.page >= paginationInfo.live.total_pages) {
+        if (loadingMoreLive || loadingMoreTab.current.live || listRefetching.current || paginationInfo.live.page >= paginationInfo.live.total_pages) {
             return;
         }
+        const gen = listGeneration.current;
+        loadingMoreTab.current.live = true;
 
         try {
             setLoadingMoreLive(true);
@@ -221,6 +243,7 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
             const result = await eventService.getEvents({
                 page_live: nextPage,
             });
+            if (gen !== listGeneration.current) return;   // the list was reset meanwhile
 
             setLiveEvents((prev) => {
                 const existingIds = new Set(prev.map((e) => e.product_app_id));
@@ -245,14 +268,17 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
         } catch (error) {
             console.log('❌ Live: Load more failed:', error);
         } finally {
+            loadingMoreTab.current.live = false;
             setLoadingMoreLive(false);
         }
     }, [loadingMoreLive, paginationInfo.live.page, paginationInfo.live.total_pages]);
 
     const loadMoreUpcoming = useCallback(async () => {
-        if (loadingMoreUpcoming || paginationInfo.upcoming.page >= paginationInfo.upcoming.total_pages) {
+        if (loadingMoreUpcoming || loadingMoreTab.current.upcoming || listRefetching.current || paginationInfo.upcoming.page >= paginationInfo.upcoming.total_pages) {
             return;
         }
+        const gen = listGeneration.current;
+        loadingMoreTab.current.upcoming = true;
 
         try {
             setLoadingMoreUpcoming(true);
@@ -265,6 +291,7 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
             const result = await eventService.getEvents({
                 page_upcoming: nextPage,
             });
+            if (gen !== listGeneration.current) return;   // the list was reset meanwhile
 
             setUpcomingEvents((prev) => {
                 const existingIds = new Set(prev.map((e) => e.product_app_id));
@@ -289,6 +316,7 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
         } catch (error) {
             console.log('❌ Upcoming: Load more failed:', error);
         } finally {
+            loadingMoreTab.current.upcoming = false;
             setLoadingMoreUpcoming(false);
         }
     }, [loadingMoreUpcoming, paginationInfo.upcoming.page, paginationInfo.upcoming.total_pages]);

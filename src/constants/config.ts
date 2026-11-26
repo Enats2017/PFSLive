@@ -8,6 +8,7 @@ import { Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { tokenService } from "../services/tokenService";
+import { readStoredDeviceIdFrom, resolveUnstoredDeviceId, StoredRead } from "../services/deviceIdStore";
 
 const DEVICE_ID_KEY = 'secure_device_id';
 
@@ -15,24 +16,41 @@ const DEVICE_ID_KEY = 'secure_device_id';
 // favourites, push registration, tracking); without the cache each one redoes
 // the OS call and the Keychain read.
 let cachedDeviceId: string | null = null;
+// ✅ Generated stand-in while the Keychain is unreadable AND there is no IDFV:
+// stable for the session, memory only (never cachedDeviceId, never persisted).
+let sessionFallbackDeviceId: string | null = null;
 
-const readStoredDeviceId = async (): Promise<string | null> => {
-  try {
-    return await SecureStore.getItemAsync(DEVICE_ID_KEY);
-  } catch (error) {
-    // SecureStore defaults to WHEN_UNLOCKED. Push registration and background
-    // tasks can run before first unlock, where the read throws rather than
-    // returning null.
-    if (API_CONFIG.DEBUG) console.log('⚠️ Device ID read failed:', error);
-    return null;
-  }
+// ✅ Second copy of the same id, written readable-while-locked. See
+// services/deviceIdStore.ts for why the legacy key is kept and never rewritten.
+const DEVICE_ID_KEY_V2 = 'secure_device_id_v2';
+const DEVICE_ID_V2_OPTS = { keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK } as const;
+
+const readStoredDeviceId = async (): Promise<StoredRead> => {
+  // SecureStore defaults to WHEN_UNLOCKED (the legacy key). Push registration
+  // and background tasks can run while the phone is locked, where the read
+  // throws rather than returning null - and a throw must not be mistaken for
+  // "nothing stored" (audit 2026-11-26, finding 7).
+  const result = await readStoredDeviceIdFrom({
+    readV2: () => SecureStore.getItemAsync(DEVICE_ID_KEY_V2, DEVICE_ID_V2_OPTS),
+    readLegacy: () => SecureStore.getItemAsync(DEVICE_ID_KEY),
+    writeV2: async (value) => { await SecureStore.setItemAsync(DEVICE_ID_KEY_V2, value, DEVICE_ID_V2_OPTS); },
+  });
+  if (result.kind === 'failed' && API_CONFIG.DEBUG) console.log('⚠️ Device ID read failed (locked Keychain?)');
+  return result;
 };
 
 const writeStoredDeviceId = async (value: string): Promise<void> => {
+  // Legacy key as well: an OTA rollback to a bundle without the v2 key must
+  // still find the id the account was locked to.
   try {
     await SecureStore.setItemAsync(DEVICE_ID_KEY, value);
   } catch (error) {
     if (API_CONFIG.DEBUG) console.log('⚠️ Device ID write failed:', error);
+  }
+  try {
+    await SecureStore.setItemAsync(DEVICE_ID_KEY_V2, value, DEVICE_ID_V2_OPTS);
+  } catch (error) {
+    if (API_CONFIG.DEBUG) console.log('⚠️ Device ID v2 write failed:', error);
   }
 };
 
@@ -72,10 +90,15 @@ export const getDeviceId = async (): Promise<string> => {
   }
 
   const stored = await readStoredDeviceId();
-  if (stored) {
-    cachedDeviceId = stored;
-    return stored;
+  if (stored.kind === 'found') {
+    cachedDeviceId = stored.value;
+    return stored.value;
   }
+  // ✅ The store could not be READ (locked Keychain) - not the same as empty.
+  // Answer this one call with the OS id but neither cache nor persist it:
+  // caching it is what made a whole background-started session send the wrong
+  // device_id. The next call after unlock reads the real one.
+  const readFailed = stored.kind === 'failed';
 
   let id = '';
   try {
@@ -86,16 +109,22 @@ export const getDeviceId = async (): Promise<string> => {
     if (API_CONFIG.DEBUG) console.log('⚠️ getIosIdForVendorAsync failed:', error);
   }
 
-  if (!id) {
-    // Was: 'unknown_device' — one literal shared by every device that failed,
-    // so the first account to claim it locked out all the others, and the
-    // server had no way to tell them apart. A random id is at least unique.
-    // Not from expo-crypto: it is not installed and adding it forces a native
-    // rebuild. This is an identifier, not a secret, and it is persisted on
-    // first use.
-    id = `gen_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}${Math.random().toString(36).slice(2, 10)}`;
-    if (API_CONFIG.DEBUG) console.log('⚠️ No OS device id available, generated:', id);
-  }
+  // Was: 'unknown_device' — one literal shared by every device that failed,
+  // so the first account to claim it locked out all the others, and the
+  // server had no way to tell them apart. A random id is at least unique.
+  // Not from expo-crypto: it is not installed and adding it forces a native
+  // rebuild. This is an identifier, not a secret, and it is persisted on
+  // first use (only when the store was readable - see resolveUnstoredDeviceId).
+  const generate = () => {
+    const g = `gen_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}${Math.random().toString(36).slice(2, 10)}`;
+    if (API_CONFIG.DEBUG) console.log('⚠️ No OS device id available, generated:', g);
+    return g;
+  };
+  const decision = resolveUnstoredDeviceId({ readFailed, osId: id, sessionFallback: sessionFallbackDeviceId, generate });
+  sessionFallbackDeviceId = decision.sessionFallback;
+  id = decision.id;
+
+  if (!decision.persistAndCache) return id;
 
   await writeStoredDeviceId(id);
   cachedDeviceId = id;

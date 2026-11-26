@@ -52,6 +52,8 @@ import { tokenService } from '../services/tokenService';
 import { palette } from '../styles/common.styles';
 import { AuthContext } from '../context/AuthContext';
 import { navigationRef } from './navigationRef';
+import { clearPendingRegistration } from '../hooks/usePendingRegistration';
+import { useAppleRecovery } from '../hooks/useAppleRecovery';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -59,6 +61,10 @@ const noGesture = { gestureEnabled: false } as const;
 
 export const AppNavigator: React.FC = () => {
   const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
+  // ✅ App-level Apple recovery (audit 2026-11-26, payments 7): a paid but
+  // unverified purchase is retried without the plans screen. Must stay above
+  // the `isLoggedIn === null` early return (hook order).
+  useAppleRecovery(isLoggedIn);
   const routeNameRef = useRef<string | undefined>(undefined);
 
   useEffect(() => {
@@ -91,6 +97,10 @@ export const AppNavigator: React.FC = () => {
     await analyticsService.setUserIdentity(userId);
   }, []);
   const logout = useCallback(async () => {
+    // ✅ A Connect saved before this logout must never be replayed on the next
+    // login (audit 2026-11-26, H2). Callers that want to resume one save it
+    // AFTER awaiting logout (useRegistrationHandler / ParticipantResult).
+    await clearPendingRegistration();
     setIsLoggedIn(false);
     // Detach the Firebase user ID. Without this, everything the next
     // person does on this device is still attributed to the account that

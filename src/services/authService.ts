@@ -3,6 +3,7 @@ import { Platform } from "react-native";
 import { API_CONFIG, getApiEndpoint, getDeviceId } from "../constants/config";
 import { tokenService } from "./tokenService";
 import { getCurrentLanguageId } from "../i18n";
+import { tokenIssueGate } from "./authFlowGuards";
 
 // ✅ TYPES
 export interface LoginRequest {
@@ -44,6 +45,9 @@ export interface AuthResponse {
   success: boolean;
   error?: string;
   fields?: string[];
+  // ✅ Client-side only: a newer token-issuing request overtook this one, so its
+  // token was revoked server-side and was NOT saved. Callers must not log in on it.
+  superseded?: boolean;
   data?: {
     token?: string;
     email?: string;
@@ -144,6 +148,11 @@ export const authService = {
    * Login user
    */
   async login(email: string, password: string): Promise<AuthResponse> {
+    // ✅ Ticket taken BEFORE the request goes out (audit 2026-11-26, finding 1).
+    // The server keeps one token per account and revokes the older one on every
+    // login, so only the newest request's token is alive. Two logins racing could
+    // otherwise answer out of order and leave the revoked token stored.
+    const ticket = tokenIssueGate.begin();
     try {
       const deviceId = await getDeviceId();
       const headers = await API_CONFIG.getHeaders();
@@ -170,6 +179,14 @@ export const authService = {
           timeout: API_CONFIG.TIMEOUT,
         },
       );
+
+      if (response.data.success && response.data.data?.token
+          && !tokenIssueGate.isLatest(ticket)) {
+        // A newer login (or OTP verify) is in flight or already saved its token,
+        // which revoked this one server-side. Never store it.
+        if (API_CONFIG.DEBUG) console.log("⏭️ Login response superseded, token not saved");
+        return { ...response.data, superseded: true };
+      }
 
       if (response.data.success && response.data.data?.token) {
         await tokenService.saveToken(response.data.data.token);

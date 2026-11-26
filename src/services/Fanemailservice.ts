@@ -1,7 +1,7 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_CONFIG, getApiEndpoint, getDeviceId } from '../constants/config';
-import { ensureFollowerId } from '../utils/followStorage';
+import { ensureFollowerId, syncIfAdoptOwed } from '../utils/followStorage';
 
 // ==================== TYPES ====================
 
@@ -92,6 +92,11 @@ export const fanEmailApi = {
             if (API_CONFIG.DEBUG) {
                 console.log('📡 Fan email API response:', response.data);
             }
+
+            // ✅ ensureFollowerId above may have registered this device (or
+            // replaced a stale id): the new row holds none of the phone's
+            // follows until the merge runs — run it now (audit 2026-11-26 #8).
+            if (email) void syncIfAdoptOwed();
 
             if (response.data.success) {
                 return {

@@ -11,6 +11,7 @@ import { BottomNavigation } from '../../components/common/BottomNavigation';
 import { TrackingPasswordModal } from '../../components/TrackingPasswordModal';
 import FavouriteCard from './FavouriteCard';
 import { favouritesApi, FavouriteItem } from '../../services/favourites';
+import { rememberBibOwners } from '../../utils/followStorage';
 import { API_CONFIG } from '../../constants/config';
 import { FavouriteListpops } from '../../types/navigation';
 import { favstyle } from '../../styles/favourite.style';
@@ -56,6 +57,11 @@ const FavouriteList: React.FC<FavouriteListpops> = ({ route, navigation }) => {
     const [loadingMore, setLoadingMore] = useState(false);
     const [paginationInfo, setPaginationInfo] = useState({ page: 1, total_pages: 1 });
     const isFetching = useRef(false);
+    // ✅ A refetch asked for while one is running (e.g. the post-unfollow refetch
+    // during the focus fetch) used to be dropped — the unfollowed runner stayed
+    // listed until the next visit. Remembered, and run once the current one ends
+    // (audit 2026-11-26 #10).
+    const refetchQueued = useRef(false);
     const isInitialMount = useRef(true);
     const { error, hasError, handleApiError, clearError } = useScreenError();
     const onFollowSuccessRef = useRef<(() => void) | null>(null);
@@ -84,6 +90,7 @@ const FavouriteList: React.FC<FavouriteListpops> = ({ route, navigation }) => {
     const fetchFavourites = useCallback(async () => {
         if (isFetching.current) {
             if (API_CONFIG.DEBUG) console.log('⏸️ Fetch already in progress');
+            refetchQueued.current = true;   // see refetchQueued
             return;
         }
 
@@ -95,6 +102,10 @@ const FavouriteList: React.FC<FavouriteListpops> = ({ route, navigation }) => {
             const result = await favouritesApi.getFavourites({ product_app_id, page: 1 });
 
             setFavourites(result.favourites);
+            // ✅ The server resolves each followed bib to its athlete here: keep
+            // that link, so unfollowing the athlete on another screen also drops
+            // this bib follow (audit 2026-11-26 FN1, see followStorage).
+            void rememberBibOwners(product_app_id, result.favourites);
             setPaginationInfo({
                 page: result.pagination.page,
                 total_pages: result.pagination.total_pages,
@@ -120,6 +131,11 @@ const FavouriteList: React.FC<FavouriteListpops> = ({ route, navigation }) => {
             setLoading(false);
             isFetching.current = false;
             isInitialMount.current = false;
+            if (refetchQueued.current) {
+                refetchQueued.current = false;
+                // The newest fetchFavourites (kept in onFollowSuccessRef below).
+                void onFollowSuccessRef.current?.();
+            }
         }
     }, [product_app_id]);
     
@@ -164,6 +180,7 @@ const FavouriteList: React.FC<FavouriteListpops> = ({ route, navigation }) => {
             });
 
             setPaginationInfo({ page: nextPage, total_pages: result.pagination.total_pages });
+            void rememberBibOwners(product_app_id, result.favourites);   // see the first page
         } catch (err) {
             if (API_CONFIG.DEBUG) console.error('❌ Favourites: Load more failed:', err);
         } finally {

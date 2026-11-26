@@ -6,6 +6,8 @@
     "awards": "Récompenses"
   },
   "raceInfo": {
+    "staleSince": "Problème de connexion — dernière mise à jour {{time}}",
+    "staleNoTime": "Problème de connexion — pas de mise à jour",
     "finisher": "Finisher",
     "raceTime": "Temps de course",
     "previousTimingPoint": "Point de chronométrage précédent",

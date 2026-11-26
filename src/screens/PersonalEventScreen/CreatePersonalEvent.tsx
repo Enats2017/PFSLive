@@ -1,4 +1,7 @@
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as FileSystem from 'expo-file-system/legacy';
+import { persistDraftFile, clearDraftFiles } from './draftFile';
 import {
   KeyboardAvoidingView,
   ScrollView,
@@ -34,6 +37,14 @@ import { useLandscapeSidePadding } from '../../hooks/useLandscapeSidePadding';
 import { tokenService } from '../../services/tokenService';
 import { analyticsService } from '../../services/analyticsService';
 import { raceReadyService } from '../../services/raceReadyService';
+import {
+  tryBeginSubmit,
+  endSubmit,
+  hasNoMappedField,
+  PERSONAL_EVENT_DRAFT_KEY,
+  serializeDraft,
+  parseDraft,
+} from './personalEventGuards';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
@@ -91,6 +102,9 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation, route }
   );
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // ✅ Synchronous submit gate (audit 2026-11-26): isSubmitting is state, seen
+  // only after a re-render, so two taps in one frame both created an event.
+  const submitGateRef = useRef(false);
   const [registrationModalVisible, setRegistrationModalVisible] = useState(false);
   const [registrationStatus, setRegistrationStatus] = useState<RegistrationStatus>(null);
   const [membershipLimit, setMembershipLimit] = useState<number | undefined>(undefined);
@@ -115,6 +129,38 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation, route }
       size: undefined,
     });
   }, [sharedFileUri, sharedFileName]);
+
+  // ✅ Put back a form kept across a login (audit 2026-11-26, finding 17).
+  // A logged-out Save got 401 → Login, and the login flow ends on Profile /
+  // Home, so the details and the shared GPX were lost. One-shot: read, apply,
+  // remove. A file shared into THIS opening wins over the stored one.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const draft = parseDraft(await AsyncStorage.getItem(PERSONAL_EVENT_DRAFT_KEY), Date.now());
+        await AsyncStorage.removeItem(PERSONAL_EVENT_DRAFT_KEY);
+        // ✅ No draft, or its file is not used (a new share wins): drop the
+        // kept copy now (re-audit 2026-11-26, N5). A used copy is dropped once
+        // the event is created.
+        if (!draft || !draft.file || sharedFileUri) void clearDraftFiles(FileSystem);
+        if (!draft || cancelled) return;
+        if (draft.name) handlers.handleNameChange(draft.name);
+        const type = EVENT_TYPE_OPTIONS.find((o) => o.value === draft.eventTypeId);
+        if (type) handlers.handleEventTypeChange(type);
+        const category = CATEGORY_OPTIONS.find((o) => o.value === draft.categoryId);
+        if (category) handlers.handleCategoryChange(category);
+        if (draft.date) handlers.handleDateChange(draft.date);   // a past date is refused there
+        if (draft.startTime) handlers.handleStartTimeChange(draft.startTime);
+        if (draft.file && !sharedFileUri) {
+          setSelectedFile({ uri: draft.file.uri, name: draft.file.name, mimeType: draft.file.mimeType, size: draft.file.size });
+        }
+      } catch { /* no draft — an empty form, as before */ }
+    })();
+    return () => { cancelled = true; };
+    // Mount only: a later language change must not re-apply anything.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const showErrorModal = useCallback((titleKey: string, messageKey: string) => {
     setErrorTitleKey(titleKey);
@@ -153,6 +199,12 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation, route }
         case 'start_hour_invalid':
           setFieldError('startTime', t('personal:errors.invalidStartTime'));
           break;
+        // ✅ The phone's zone was refused (audit 2026-11-26). Unmapped, it was
+        // a debug log and the user saw nothing at all.
+        case 'timezone_required':
+        case 'timezone_invalid':
+          setFieldError('startTime', t('personal:errors.timezoneInvalid'));
+          break;
         case 'gpx_too_large':
           setFieldError('file', t('personal:errors.fileTooLarge', { size: MAX_FILE_SIZE / (1024 * 1024) }));
           break;
@@ -173,10 +225,14 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation, route }
   }, [setFieldError, t]);
 
   const handleSubmit = useCallback(async () => {
+    // ✅ Gate first, before any await or state read (audit 2026-11-26): the
+    // second tap of a double tap is refused here, in the same frame.
+    if (submitGateRef.current) return;
     clearAllErrors();
 
     if (!validateForm()) return;
     if (isSubmitting) return;
+    if (!tryBeginSubmit(submitGateRef)) return;
 
     // After validation passes, so this counts real submit attempts rather
     // than every tap on a half-filled form.
@@ -225,7 +281,9 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation, route }
             showErrorModal('personal:errors.createFailedTitle', 'personal:errors.participantInsertFailed');
             break;
           case 'validation_failed':
-            if (response.fields && response.fields.length > 0) {
+            // ✅ Only codes the form can show count (audit 2026-11-26): with
+            // none of them the form stayed silent, so say it generically.
+            if (response.fields && response.fields.length > 0 && !hasNoMappedField(response.fields)) {
               applyApiFieldErrors(response.fields);
             } else {
               showErrorModal('personal:errors.validationErrorTitle', 'personal:errors.validationErrorMessage');
@@ -238,6 +296,26 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation, route }
           case 'unauthorized':
           case 'token_invalid':
           case 'token_expired':
+            // ✅ Keep the form for after the login (finding 17) — see the
+            // draft effect above. Best-effort: Login opens either way.
+            try {
+              // ✅ Keep a COPY of the GPX (re-audit 2026-11-26, N5): an Android
+              // content:// grant dies with the process, so after the login the
+              // restored file failed at Save. See draftFile.ts.
+              const keptUri = selectedFile
+                ? await persistDraftFile(FileSystem, selectedFile.uri, selectedFile.name, Date.now())
+                : null;
+              await AsyncStorage.setItem(PERSONAL_EVENT_DRAFT_KEY, serializeDraft({
+                name: formData.name,
+                eventTypeId: formData.selectedEventType?.value ?? null,
+                categoryId: formData.selectedCategory?.value ?? null,
+                date: formData.date,
+                startTime: formData.startTime,
+                file: selectedFile && keptUri
+                  ? { uri: keptUri, name: selectedFile.name, mimeType: selectedFile.mimeType, size: selectedFile.size }
+                  : null,
+              }, Date.now()));
+            } catch { /* silent */ }
             navigation.navigate('LoginScreen');
             break;
           default:
@@ -256,6 +334,7 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation, route }
         const createdKey = createdId > 0 ? `custom_${createdId}` : null;
         resetForm();
         clearFile();
+        void clearDraftFiles(FileSystem);   // ✅ a kept draft copy is no longer needed (N5)
         await analyticsService.markAsParticipant('create_event'); 
         void analyticsService.logCreateEventStep('completed');
         const customerId = await tokenService.getCustomerId();   // same method used in athleteProfileService.ts
@@ -286,6 +365,7 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation, route }
       toastError(t('common:errors.generic'), message);
     } finally {
       setIsSubmitting(false);
+      endSubmit(submitGateRef);
     }
   }, [
     clearAllErrors, validateForm, isSubmitting, formData,

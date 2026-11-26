@@ -22,7 +22,8 @@
     "accountNotFoundTitle": "Account Niet Gevonden",
     "accountNotFound": "Geen account gevonden met dit e-mailadres",
     "emailNotVerifiedTitle": "Account Nog Niet Actief",
-    "emailNotVerified": "Hebt u zich hier geregistreerd? Voer dan de code in die wij u hebben gemaild. Bent u via de website ingeschreven? Open dan de validatielink in die mail om een wachtwoord te kiezen en meld u daarmee aan.",
+    "emailNotVerified": "Hebt u zich in de app geregistreerd? Registreer dan opnieuw met hetzelfde e-mailadres om een nieuwe code te ontvangen. Bent u via de website ingeschreven? Open dan de validatielink in die mail om een wachtwoord te kiezen en meld u daarmee aan.",
+    "emailNotVerifiedResume": "Voer de code in die wij u hebben gemaild om uw account te activeren. Tik op Opnieuw verzenden als hij verlopen is.",
     "accountDisabledTitle": "Account Uitgeschakeld",
     "accountDisabled": "Uw account is uitgeschakeld. Neem contact op met support voor hulp.",
     "deviceNotAllowedTitle": "Apparaat Niet Toegestaan",
@@ -57,5 +58,7 @@
     }
   },
   "createAccount": "Account aanmaken",
+  "pendingConnectExpiredTitle": "Aanvraag verlopen",
+  "pendingConnectExpired": "Uw eerdere aanvraag is verlopen. Open het evenement en tik opnieuw op Live Tracking.",
   "noAccountNote": "Het meeste van Livio werkt zonder account — je hebt er alleen een nodig om te racen of te volgen."
 }

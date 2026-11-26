@@ -1,5 +1,5 @@
 import { apiClient } from './api';
-import { API_CONFIG, getApiEndpoint } from '../constants/config';
+import { API_CONFIG, getApiEndpoint, getDeviceId } from '../constants/config';
 import { Platform, Linking } from 'react-native';
 import Constants from 'expo-constants';
 import { getCurrentLanguageId } from '../i18n';
@@ -38,6 +38,10 @@ export interface VersionCheckResult {
   updateUrl: string;
   title: string;
   message: string;
+  // ✅ true when the check itself failed (offline, server error) — the "no
+  // update" answer then means "unknown", and the caller must not treat it as
+  // a completed check (audit 2026-11-26, see useVersionCheck).
+  failed?: boolean;
 }
 
 // ✅ OPTIMIZATION: Cache version to avoid repeated reads
@@ -98,7 +102,11 @@ export const versionService = {
       }
 
       const url = getApiEndpoint(API_CONFIG.ENDPOINTS.VERSION_CHECK);
-      const headers = await API_CONFIG.getHeaders();
+      // ✅ X-Device-Id: per-phone rate limit on the server (ApiSecurity
+      // rate_scope_field) instead of per venue IP; a header, so the response
+      // cache (keyed on the body) is unchanged (app audit 2026-11-26).
+      const deviceId = await getDeviceId().catch(() => '');
+      const headers = { ...(await API_CONFIG.getHeaders()), ...(deviceId ? { 'X-Device-Id': deviceId } : {}) };
 
       const requestBody = {
         language_id,
@@ -168,7 +176,7 @@ export const versionService = {
       }
 
       // ✅ Don't block app on version check failure
-      return this.getNoUpdateResult(currentVersion);
+      return { ...this.getNoUpdateResult(currentVersion), failed: true };
     }
   },
 

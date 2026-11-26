@@ -17,6 +17,7 @@ import { userfavouriteService, FavouriteItem } from '../../services/userfavourit
 import { UserFavouriteListpops } from '../../types/navigation';
 import { useFollowManager } from '../../hooks/useFollowManager';
 import { whenFollowSyncIdle } from '../../utils/followStorage';
+import { pruneRestoredRemovals } from './removedRows';
 import ErrorScreen from '../../components/ErrorScreen';
 import { useScreenError } from '../../hooks/useApiError';
 import { useSessionExpired } from '../../hooks/useSessionExpired';
@@ -85,6 +86,8 @@ const UserFavouriteList: React.FC<UserFavouriteListpops> = ({ navigation }) => {
     const onFollowSuccessRef = useRef<(() => void) | null>(null);
 
     const {
+        followedUsers,
+        followingInProgress,
         isFollowed,
         isLoading,
         handleFollowPress,
@@ -101,6 +104,19 @@ const UserFavouriteList: React.FC<UserFavouriteListpops> = ({ navigation }) => {
         // Cross-event screen: follows here are athlete-scoped, so no raceName.
         { screenName: ANALYTICS_SCREENS.USER_FAVOURITES },
     );
+
+    // ✅ An unfollow that failed is rolled back by useFollowManager: show its
+    //    row again instead of leaving it hidden until the next visit
+    //    (audit 2026-11-26 #10, see removedRows.ts).
+    //    removedIds is a dep too: a Remove tap hides the row BEFORE the toggle
+    //    runs, and a toggle that is ignored (useFollowManager's double-tap
+    //    cooldown / in-flight guard) changes neither followedUsers nor the
+    //    in-progress set — the row would stay hidden while still followed.
+    //    Re-checked on every hide; pruneRestoredRemovals returns `prev` when
+    //    nothing changes, so this cannot loop.
+    useEffect(() => {
+        setRemovedIds(prev => pruneRestoredRemovals(prev, followedUsers, followingInProgress));
+    }, [followedUsers, followingInProgress, removedIds]);
 
     // ✅ useCallback so the ref always holds a stable, up-to-date reference
     const loadInitial = useCallback(async () => {

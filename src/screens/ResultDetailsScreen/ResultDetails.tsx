@@ -50,7 +50,7 @@ const ResultDetails: React.FC<ResultDetailspops> = ({ navigation, route }) => {
         from_live,
     } = route.params;
 
-    const { data, loading, hasError, error, clearError, retry } = useResultDetail(
+    const { data, loading, hasError, error, clearError, retry, stale, lastUpdatedAt } = useResultDetail(
         product_app_id,
         product_option_value_app_id,
         bib,
@@ -189,7 +189,7 @@ const ResultDetails: React.FC<ResultDetailspops> = ({ navigation, route }) => {
             <View style={[s.page, { width }]}>
                 {item === 'raceInfo' && (
                     view === 'live' ? (
-                        <RaceLive raceInfo={data?.race_info} event={data?.event} checkpoints={data?.checkpoints} />
+                        <RaceLive raceInfo={data?.race_info} event={data?.event} checkpoints={data?.checkpoints} stale={stale} lastUpdatedAt={lastUpdatedAt} />
                     ) : view === 'final' ? (
                         <RaceInfoTab raceInfo={data?.race_info} event={data?.event} checkpoints={data?.checkpoints} />
                     ) : view === 'upcoming' ? (
@@ -226,7 +226,7 @@ const ResultDetails: React.FC<ResultDetailspops> = ({ navigation, route }) => {
                 )}
             </View>
         );
-    }, [data, raceStatus, width]);
+    }, [data, raceStatus, width, stale, lastUpdatedAt]);
 
     if (loading) {
         return (

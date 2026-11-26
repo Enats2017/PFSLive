@@ -14,6 +14,7 @@ import { API_CONFIG } from "../constants/config";
 import { AppError, ErrorType } from "../services/api";
 import { useScreenError, ScreenError } from "../hooks/useApiError";
 import { useTranslation } from "react-i18next";
+import { rememberBibOwners } from "../utils/followStorage";
 
 export const TYPE_OPTIONS: FilterOption[] = [
   { label: "allrace:filter.results", value: "0" },
@@ -33,6 +34,59 @@ interface FetchOpts {
   checkpointIndex?: number | null;
 }
 
+/**
+ * Append the next page without repeating a runner (app audit 2026-11-26).
+ * Pages are offsets into a ranking that MOVES during a live race: a runner
+ * pushed over the page boundary between the page-1 and page-2 requests came
+ * back on page 2 as a second row. Same bib = same runner on one distance;
+ * rows without a bib are never merged.
+ */
+export function appendResultsPage(prev: RaceResult[], next: RaceResult[]): RaceResult[] {
+  const seen = new Set(prev.map((r) => String(r.bib ?? "").trim()).filter((b) => b !== ""));
+  const fresh = (next ?? []).filter((r) => {
+    const b = String(r.bib ?? "").trim();
+    return b === "" || !seen.has(b);
+  });
+  return [...prev, ...fresh];
+}
+
+const posNum = (r: RaceResult | undefined): number | null => {
+  const n = Number(String(r?.position ?? "").replace(/\D+$/, "").trim());
+  return r && String(r.position ?? "").trim() !== "" && Number.isFinite(n) && n > 0 ? n : null;
+};
+
+/**
+ * Did a runner fall between two pages? (re-audit 2026-11-26, live offset
+ * pagination.) Only on the overall (scratch) list, where rows are in overall
+ * position order: if the new page starts more than one place after the last
+ * row shown, someone moved up from the new page's range into the pages
+ * already shown after those were fetched — on neither page. Ties (5, 5, 7)
+ * only cost one extra request.
+ */
+export function pageBoundaryGap(prev: RaceResult[], next: RaceResult[]): boolean {
+  const last = posNum(prev[prev.length - 1]);
+  const first = posNum(next[0]);
+  return last !== null && first !== null && first > last + 1;
+}
+
+/**
+ * The previous page fetched again (`again`) supplies the runners who moved
+ * across the boundary; they are added (by bib) and the overall list is put
+ * back in position order. Rows without a numeric position keep their place
+ * at the end (DNF / DNS…).
+ */
+export function mergeBoundaryRefetch(prev: RaceResult[], again: RaceResult[], next: RaceResult[]): RaceResult[] {
+  // The page fetched again is the fresher copy: its rows replace the ones
+  // shown (new positions), runners it adds are appended, then the next page.
+  const fresh = new Map(again.map((r) => [String(r.bib ?? "").trim(), r] as [string, RaceResult]));
+  const updated = prev.map((r) => { const b = String(r.bib ?? "").trim(); return (b !== "" && fresh.get(b)) || r; });
+  const all = appendResultsPage(appendResultsPage(updated, again), next);
+  const ranked = all.filter((r) => posNum(r) !== null);
+  const rest = all.filter((r) => posNum(r) === null);
+  ranked.sort((a, b) => (posNum(a) as number) - (posNum(b) as number));
+  return [...ranked, ...rest];
+}
+
 export const useResultList = (
   product_app_id: number,
   initial_pov_id?: number,
@@ -41,7 +95,17 @@ export const useResultList = (
   followedBibs?: Map<number, Set<string>>,
 ) => {
   const isMounted = useRef(true);
-  const requestLock = useRef(false);
+  // ✅ Newest request wins (app audit 2026-11-26). This was a lock that
+  // SKIPPED any fetch while another was running — but the dropdowns had
+  // already changed state, so a distance / category / type / checkpoint picked
+  // while page 2 (or the first load) was still loading left the OLD distance's
+  // rows under the NEW label, and the next page then appended the new
+  // distance's rows to them. Now a filter, refresh or retry always runs and an
+  // older answer still in flight is dropped (latestSeq). Only a page load
+  // waits for nothing else to be running (inFlight), so one page never loads
+  // twice and never lands on top of a filter change.
+  const latestSeq = useRef(0);
+  const inFlight = useRef(0);
   const hasFetched = useRef(false);
   const { t } = useTranslation(["allrace"]);
 
@@ -66,6 +130,9 @@ export const useResultList = (
   const [distances, setDistances] = useState<Distance[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [results, setResults] = useState<RaceResult[]>([]);
+  // The rows on screen, readable from fetchData (boundary check below).
+  const resultsRef = useRef<RaceResult[]>([]);
+  resultsRef.current = results;
   const [checkpointsList, setCheckpointsList] = useState<CheckpointListItem[]>([]);
   const [pagination, setPagination] = useState<Pagination | null>(null);
   const [favBibs, setFavBibs] = useState<Set<string>>(new Set());
@@ -73,6 +140,9 @@ export const useResultList = (
   const [filterLoad, setFilterLoad] = useState(false);
   const [pageLoad, setPageLoad] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  // ✅ Loading the NEXT page failed: the rows already shown stay, the list
+  // footer offers a retry (it used to swap the whole list for the error screen).
+  const [pageError, setPageError] = useState(false);
   const [raceStatus, setRaceStatus] = useState<string>("");
   const [raceProgressStatus, setRaceProgressStatus] = useState<string>("");
   const [showUtmbIndex, setShowUtmbIndex] = useState(false);
@@ -98,24 +168,31 @@ export const useResultList = (
 
   const fetchData = useCallback(
     async (opts: FetchOpts): Promise<void> => {
-      if (requestLock.current) {
+      const { povId, live, category, page, mode, checkpointIndex } = opts;
+
+      if (mode === "paginate" && inFlight.current > 0) {
         if (API_CONFIG.DEBUG) {
-          console.log("⏸️ Request already in progress, skipping");
+          console.log("⏸️ Request already in progress, skipping page", page);
         }
         return;
       }
 
-      requestLock.current = true;
-
-      const { povId, live, category, page, mode, checkpointIndex } = opts;
+      const seq = ++latestSeq.current;
+      inFlight.current++;
+      // Still the newest request? An older one's answer must not touch state.
+      const isLatest = () => isMounted.current && seq === latestSeq.current;
 
       try {
         if (mode === "initial") setInitialLoad(true);
         if (mode === "filter") setFilterLoad(true);
         if (mode === "paginate") setPageLoad(true);
         if (mode === "refresh") setRefreshing(true);
+        // A filter / refresh replaces the list: a page load it overtook
+        // (dropped below) no longer owns the footer spinner.
+        if (mode !== "paginate") setPageLoad(false);
 
         clearError();
+        setPageError(false);
 
         if (API_CONFIG.DEBUG) {
           console.log("📡 Fetching results:", {
@@ -138,7 +215,35 @@ export const useResultList = (
           page,
         });
 
-        if (!isMounted.current) return;
+        if (!isLatest()) {
+          if (API_CONFIG.DEBUG) console.log("⏭️ Results answer dropped (a newer request is on screen)", { seq, mode, page });
+          return;
+        }
+
+        // ✅ Live, overall list: a runner who moved up across the page
+        // boundary between two page requests was on neither page. When the
+        // new page starts with a gap, fetch the previous page once more and
+        // merge (re-audit 2026-11-26). One extra request, only on a gap.
+        let boundaryRows: RaceResult[] | null = null;
+        if (mode === "paginate" && page > 1 && category === "scratch" && checkpointIndex == null
+            && data.event?.race_status === "in_progress"
+            && pageBoundaryGap(resultsRef.current, data.results)) {
+          try {
+            const again = await resultList.getEventRanking({
+              product_app_id,
+              product_option_value_app_id: povId,
+              from_live: live,
+              filter_category: "",
+              checkpoint_index: null,
+              page: page - 1,
+            });
+            if (!isLatest()) return;
+            boundaryRows = again.results ?? [];
+          } catch {
+            // The page itself arrived — show it; the gap stays until a refresh.
+            if (!isLatest()) return;
+          }
+        }
 
         if (data.event?.race_status) {
           setRaceStatus(data.event.race_status);
@@ -183,8 +288,13 @@ export const useResultList = (
           setCategories(data.categories);
         }
 
+        // ✅ bib → athlete links for followed bibs on this page (followStorage
+        // rememberBibOwners, audit 2026-11-26 FN1). Fire-and-forget.
+        void rememberBibOwners(product_app_id, data.results as any[]);
         setResults((prev) =>
-          mode === "paginate" ? [...prev, ...data.results] : data.results,
+          mode !== "paginate" ? data.results
+            : boundaryRows ? mergeBoundaryRefetch(prev, boundaryRows, data.results)
+            : appendResultsPage(prev, data.results),
         );
 
         // Keep the checkpoint list from the backend. It's event-level and always
@@ -195,7 +305,8 @@ export const useResultList = (
           setCheckpointsList(data.checkpoints_list);
         }
 
-        setStatistics(data.statistics);
+        // A response without statistics must not crash the strip.
+        setStatistics(data.statistics ?? { crossed: 0, expected: 0, started: 0, dnf: 0 });
 
         setPagination(data.pagination);
         currentPage.current = page;
@@ -210,21 +321,25 @@ export const useResultList = (
           });
         }
       } catch (e: any) {
-        if (!isMounted.current) return;
+        if (!isLatest()) return;
 
         if (API_CONFIG.DEBUG) {
           console.error("❌ Fetch results error:", e);
         }
 
-        handleApiError(e);
+        // ✅ A failed NEXT page keeps the rows on screen (footer retry).
+        if (mode === "paginate") setPageError(true);
+        else handleApiError(e);
       } finally {
-        if (!isMounted.current) return;
-
-        requestLock.current = false;
-        setInitialLoad(false);
-        setFilterLoad(false);
-        setPageLoad(false);
-        setRefreshing(false);
+        inFlight.current = Math.max(0, inFlight.current - 1);
+        // Only the newest request ends the spinners; an overtaken one would
+        // end the spinner of the filter load that is still running.
+        if (isLatest()) {
+          setInitialLoad(false);
+          setFilterLoad(false);
+          setPageLoad(false);
+          setRefreshing(false);
+        }
       }
     },
     [product_app_id],
@@ -605,6 +720,7 @@ export const useResultList = (
     filterLoad,
     pageLoad,
     refreshing,
+    pageError,   // ← next page failed; footer retry (calls onEndReached)
     error,
     toggleFav,
     onDistanceSelect,

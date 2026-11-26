@@ -69,7 +69,9 @@
     "confirmMessage": "\"{{name}}\" wordt permanent verwijderd. Deze actie kan niet ongedaan worden gemaakt.",
     "cancel": "Annuleren",
     "confirm": "Verwijderen",
-    "trackingStartedError": "Dit evenement kan niet meer worden verwijderd omdat de tracking al is gestart."
+    "trackingStartedError": "Dit evenement kan niet meer worden verwijderd omdat de tracking al is gestart.",
+    "trackingNowError": "Je trackt dit evenement op dit moment. Stop eerst de tracking en verwijder het daarna.",
+    "trackingRecentError": "Dit evenement is enkele minuten geleden getrackt. Probeer het over enkele minuten opnieuw."
   },
   "events": {
     "viewResult": "Bekijk resultaat"

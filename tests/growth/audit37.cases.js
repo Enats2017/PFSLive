@@ -85,7 +85,8 @@ module.exports = ({ test, SRC }) => {
   // ── profile ────────────────────────────────────────────────────────────
   test('profile: the tab pager measures its real width (onLayout — setContainerWidth was never called); item renderers re-run when the profile loads', () => {
     assert.ok(/onLayout=\{\(e\) => setContainerWidth\(e\.nativeEvent\.layout\.width\)\}/.test(read('screens/ProfileScreen/ProfileScreen.tsx')));
-    assert.ok(/\[profile\?\.is_own_profile, onDeleteEvent\]/.test(read('screens/ProfileScreen/TrainingContent.tsx')));
+    // + trackedParticipantId since the 2026-11-26 audit (tracked card loses Edit/Delete)
+    assert.ok(/\[profile\?\.is_own_profile, onDeleteEvent, trackedParticipantId\]/.test(read('screens/ProfileScreen/TrainingContent.tsx')));
     assert.ok(/\[profile\?\.is_own_profile\]/.test(read('screens/ProfileScreen/PastTab.tsx')));
   });
 

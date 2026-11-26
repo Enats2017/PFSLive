@@ -6,6 +6,7 @@ import {
     ActivityIndicator,
     RefreshControl,
     ScrollView,
+    TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -110,6 +111,7 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
         filterLoad,
         pageLoad,
         refreshing,
+        pageError,
         error,
         onDistanceSelect,
         onTypeSelect,
@@ -204,11 +206,19 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
         event_name,
     ]);
 
+    // ✅ A failed next page keeps the list and offers a retry here (app audit
+    // 2026-11-26) — it used to replace every row with the error screen.
     const ListFooter = useCallback(() =>
         pageLoad
             ? <ActivityIndicator size="small" color={palette.navy} style={{ paddingVertical: 16 }} />
-            : null
-        , [pageLoad]);
+            : pageError
+                ? (
+                    <TouchableOpacity onPress={onEndReached} accessibilityRole="button" style={{ paddingVertical: 16, alignItems: 'center' }}>
+                        <Text style={resultListStyle.loadingText}>{t('allrace:race.loadMoreFailed')}</Text>
+                    </TouchableOpacity>
+                )
+                : null
+        , [pageLoad, pageError, onEndReached, t]);
 
     // Only once there is a list to scroll: loading / error / empty states keep
     // the filters fixed above them, so a filter can still be changed.

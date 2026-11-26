@@ -1,6 +1,6 @@
 import { API_CONFIG, getApiEndpoint, getDeviceId } from '../constants/config';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { ensureFollowerId } from '../utils/followStorage';
+import { ensureFollowerId, syncIfAdoptOwed } from '../utils/followStorage';
 
 interface GetFollowerLanguageResponse {
     success: boolean;
@@ -78,6 +78,10 @@ class GuestSettingsService {
             await ensureFollowerId();
             json = await this.request<UpdateFollowerLanguageResponse>(body);
         }
+        // ✅ This call may have registered the device (or replaced a stale id):
+        // the row then holds none of the phone's follows until the merge runs —
+        // run it now, not at the next follow / foreground (audit 2026-11-26 #8).
+        void syncIfAdoptOwed();
         return { languageId: json.data.language_id };
     }
 }
