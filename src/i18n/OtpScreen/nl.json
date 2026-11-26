@@ -54,7 +54,7 @@
   },
   "notArrived": {
     "title": "Niets ontvangen?",
-    "spam": "Kijk in je spammap — de code komt van no-reply@liviolive.com.",
+    "spam": "Kijk in je spammap — de code komt van robot@liviolive.com.",
     "wrongAddress": "Verkeerd adres?",
     "changeEmail": "E-mail wijzigen"
   }

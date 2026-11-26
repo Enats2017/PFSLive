@@ -54,7 +54,7 @@
   },
   "notArrived": {
     "title": "Not arrived?",
-    "spam": "Check your spam folder — the code is sent from no-reply@liviolive.com.",
+    "spam": "Check your spam folder — the code is sent from robot@liviolive.com.",
     "wrongAddress": "Wrong address?",
     "changeEmail": "Change email"
   }
