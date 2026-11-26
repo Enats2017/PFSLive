@@ -502,7 +502,14 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
                                 style={styles.activationBuyButton}
                                 activeOpacity={0.85}
                                 onPress={handleBuyActivation}
-                                disabled={purchaseLoading}
+                                // purchaseButtonLoading too: it is on from the tap until Apple
+                                // answers. purchaseLoading alone only came on AFTER Apple
+                                // confirmed, so the button stayed live while the sheet opened
+                                // and a second tap bought a second activation (support
+                                // 2026-11-26, 22 double charges). The hook also refuses a second
+                                // request (tryBeginPurchase) - this is the visible half.
+                                disabled={purchaseLoading || purchaseButtonLoading}
+                                accessibilityState={{ disabled: purchaseLoading || purchaseButtonLoading, busy: purchaseButtonLoading }}
                             >
                                 <Text style={styles.activationBuyText}>
                                     {t('membership:activation.buy')}

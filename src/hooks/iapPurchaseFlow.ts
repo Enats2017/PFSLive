@@ -58,6 +58,19 @@ export interface PurchaseFlowResult<R> {
   error?: unknown;
 }
 
+/**
+ * One purchase at a time. Returns true and closes the gate when no purchase
+ * is in progress; false (leave the gate as is) when one already is. A plain
+ * ref, not React state, so two taps in the same frame cannot both pass.
+ * Support 2026-11-26: a second tap while the first purchase was starting
+ * opened a second Apple sheet - 22 activations + 1 subscription charged twice.
+ */
+export function tryBeginPurchase(gate: { current: boolean }): boolean {
+  if (gate.current) return false;
+  gate.current = true;
+  return true;
+}
+
 export function transactionIdOf(purchase: PurchaseLike): string | null {
   const id = purchase.transactionId ?? purchase.id ?? purchase.transaction_id;
   return id ? String(id) : null;

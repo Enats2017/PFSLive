@@ -21,6 +21,7 @@ import {
   processPurchase,
   selectRestorable,
   selectUnfinishedConsumables,
+  tryBeginPurchase,
 } from "./iapPurchaseFlow";
 import { analyticsService, SubscriptionState } from "../services/analyticsService";
 
@@ -246,8 +247,20 @@ export function useMembershipPlans(): UseMembershipPlansResult {
 
   const requestPurchase = useCallback(
     async (params: Parameters<typeof rawRequestPurchase>[0]) => {
+      // ✅ ONE purchase at a time (support 2026-11-26). A second tap while the
+      // first purchase is still starting - double tap on Buy, or Continue then
+      // Buy - opened a second Apple sheet: 22 activations and 1 subscription
+      // (2026-10-15 .. 11-11) were charged twice, 6-23 s apart, adjacent
+      // transaction ids. Only the first was verified; the screen had already
+      // navigated away when the second arrived. purchaseIntentRef is a ref, so
+      // it blocks a second tap in the same frame, before any re-render.
+      // Released by the error listener (cancel/fail), by handlePurchase
+      // (verified or not) and by the throw below.
+      if (!tryBeginPurchase(purchaseIntentRef)) {
+        console.log("⏭ Purchase already in progress - ignoring second request");
+        return null;
+      }
       awaitingPurchaseRef.current = true; // arm it — a real purchase attempt is starting
-      purchaseIntentRef.current = true;
       setPurchaseButtonLoading(true);
       try {
         return await rawRequestPurchase(params);
@@ -403,7 +416,9 @@ export function useMembershipPlans(): UseMembershipPlansResult {
       setRestoreError(error?.message || "Restore failed");
     } finally {
       setRestoreLoading(false);
-      awaitingPurchaseRef.current = false;
+      // Restore no longer arms awaitingPurchaseRef, so it must not clear it
+      // either: clearing it during a purchase made that purchase's result
+      // look non-user-initiated and left the one-purchase gate closed.
     }
   }, [handlePurchase, loadPlans, resolveConsumable]);
 

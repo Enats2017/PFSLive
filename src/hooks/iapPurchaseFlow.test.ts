@@ -17,6 +17,7 @@ import {
   processPurchase,
   selectRestorable,
   selectUnfinishedConsumables,
+  tryBeginPurchase,
   type PurchaseFlowDeps,
   type PurchaseLike,
   type ResolveConsumable,
@@ -310,6 +311,54 @@ test('selectRestorable: consumables + running subscriptions; not expired, unknow
   );
 });
 
+console.log('\niapPurchaseFlow - one purchase at a time (double charges 2026-10-15 .. 11-11)');
+
+test('double tap: second purchase request is refused while the first is running', () => {
+  const gate = { current: false };
+  assert.strictEqual(tryBeginPurchase(gate), true, 'first tap starts');
+  assert.strictEqual(tryBeginPurchase(gate), false, 'second tap, same frame, refused');
+  assert.strictEqual(tryBeginPurchase(gate), false, 'third tap refused');
+  assert.strictEqual(gate.current, true);
+});
+
+test('after the purchase ends (verified, cancelled or failed) the next purchase can start', () => {
+  const gate = { current: false };
+  assert.ok(tryBeginPurchase(gate));
+  gate.current = false; // what handlePurchase / the error listener do
+  assert.ok(tryBeginPurchase(gate));
+});
+
+test('replay of the real pattern: Buy tapped twice -> one Apple purchase, one charge, one credit', async () => {
+  const store = new FakeStore();
+  const backend = new FakeBackend();
+  const gate = { current: false };
+  const deps = session(store, backend);
+  let n = 0;
+  const tapBuy = () => {
+    if (!tryBeginPurchase(gate)) return null; // hook: requestPurchase
+    return store.buy(`T-tap-${n++}`, SINGLE); // Apple sheet -> charge
+  };
+  const first = tapBuy();
+  const second = tapBuy(); // 6-23 s later in the logs, before the first was answered
+  assert.ok(first);
+  assert.strictEqual(second, null);
+  await processPurchase(first!, deps);
+  gate.current = false;
+  assert.strictEqual(store.txns.length, 1, 'only one charge');
+  assert.strictEqual(backend.credited.size, 1);
+});
+
+test('already double-charged (old app): the lost second charge is credited on the next visit', async () => {
+  const store = new FakeStore();
+  const backend = new FakeBackend();
+  const first = store.buy('A-first', SINGLE);
+  store.buy('A-second', SINGLE); // confirmed after the screen had navigated away
+  await processPurchase(first, session(store, backend)); // the one the old app verified
+  const out = await recoveryPass(store, session(store, backend));
+  assert.deepStrictEqual(out, ['verified']);
+  assert.deepStrictEqual([...backend.credited.keys()].sort(), ['A-first', 'A-second']);
+});
+
 console.log('\nuseMembershipplans.ts wiring (source checks)');
 
 const hookSrc = fs.readFileSync(path.join(process.cwd(), 'src', 'hooks', 'useMembershipplans.ts'), 'utf8');
@@ -338,6 +387,24 @@ test('listener, recovery and Restore all go through handlePurchase -> processPur
   assert.ok(/processPurchase<VerifyPurchaseResponse>\(purchase,/.test(code));
   // Only one place calls the verify API.
   assert.strictEqual((code.match(/appleVerifyService\.verifyPurchase\(/g) ?? []).length, 1);
+});
+
+test('requestPurchase checks the one-purchase gate before calling StoreKit', () => {
+  const i = code.indexOf('const requestPurchase = useCallback(');
+  const gate = code.indexOf('tryBeginPurchase(purchaseIntentRef)', i);
+  const raw = code.indexOf('rawRequestPurchase(params)', i);
+  assert.ok(i > 0 && gate > i && raw > gate, 'gate must come before rawRequestPurchase');
+});
+
+test('Restore does not clear awaitingPurchaseRef (would strand the purchase gate)', () => {
+  const r = code.slice(code.indexOf('const restorePurchases = useCallback('), code.indexOf('}, [handlePurchase, loadPlans, resolveConsumable]);'));
+  assert.ok(r.length > 100, 'restore block found');
+  assert.ok(!/awaitingPurchaseRef\.current\s*=/.test(r));
+});
+
+test('activation Buy button is disabled while a purchase is starting (purchaseButtonLoading)', () => {
+  const screen = fs.readFileSync(path.join(process.cwd(), 'src', 'screens', 'ProfileScreen', 'MembershipPlansScreen.tsx'), 'utf8');
+  assert.ok(/onPress=\{handleBuyActivation\}[\s\S]{0,800}?disabled=\{purchaseLoading \|\| purchaseButtonLoading\}/.test(screen));
 });
 
 test('native layer is still openiap-apple 2.2.1 (the unfinished-not-emitted behaviour this relies on)', () => {
