@@ -1,6 +1,7 @@
 import * as Notifications from 'expo-notifications';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_CONFIG } from '../constants/config';
+import { eventLocalDay } from './trackingSessionRules';
 
 // ✅ START REMINDERS (2026-10-20 re-check of races 18/19).
 //
@@ -78,6 +79,26 @@ const serial = <T,>(job: () => Promise<T>): Promise<T> => {
   return run;
 };
 
+/** Pure: the stored session belongs to another participant AND to an earlier event-local day. */
+export function isOtherDaySession(
+  paramsRaw: string | null,
+  participantId: number | string | null | undefined,
+  eventTzOffsetMs: number | null | undefined,
+  nowMs: number,
+): boolean {
+  try {
+    if (!paramsRaw || participantId == null || String(participantId) === '') return false;
+    if (typeof eventTzOffsetMs !== 'number' || !isFinite(eventTzOffsetMs)) return false;
+    const p = JSON.parse(paramsRaw);
+    if (!p?.participantId || String(p.participantId) === String(participantId) || !p.raceStartTime) return false;
+    const gun = new Date(p.raceStartTime).getTime();
+    if (isNaN(gun)) return false;
+    return eventLocalDay(gun, eventTzOffsetMs) < eventLocalDay(nowMs, eventTzOffsetMs);
+  } catch {
+    return false;
+  }
+}
+
 export const startReminderService = {
   /**
    * Re-plan the reminders for the race home currently offers. `eligible` is the
@@ -90,6 +111,10 @@ export const startReminderService = {
     eligible: boolean;
     texts: { preTitle: string; preBody: string; postTitle: string; postBody: string };
     participantId?: number | string | null;   // home's next_race_participant_app_id
+    /** Home offers Start for that participant (the screen's eligibility minus "not tracking"). */
+    startOffered?: boolean;
+    /** Event-tz offset (HomeScreen serverTimeOffsetRef), null when not captured. */
+    eventTzOffsetMs?: number | null;
   }): Promise<StartReminderPlanItem[]> {
     // Not `this`: a detached call (const { sync } = …) must still work.
     return serial(() => startReminderService._syncNow(opts));
@@ -100,11 +125,21 @@ export const startReminderService = {
     eligible: boolean;
     texts: { preTitle: string; preBody: string; postTitle: string; postBody: string };
     participantId?: number | string | null;
+    startOffered?: boolean;
+    eventTzOffsetMs?: number | null;
   }): Promise<StartReminderPlanItem[]> {
     try {
       let eligible = opts.eligible;
       try {
-        if ((await AsyncStorage.getItem(TRACKING_PARAMS_KEY_LOCAL)) !== null) eligible = false;
+        const raw = await AsyncStorage.getItem(TRACKING_PARAMS_KEY_LOCAL);
+        if (raw !== null) {
+          // ✅ A stored session from an EARLIER event-local day for ANOTHER
+          // registration (Saturday's, never closed) does not track today's race
+          // (2026-11-26 second audit, Soupe Sunday): its runner still gets the
+          // "start tracking" reminders for today. Any other stored session
+          // suppresses them, as before.
+          eligible = !!opts.startOffered && isOtherDaySession(raw, opts.participantId, opts.eventTzOffsetMs, Date.now());
+        }
       } catch { /* unreadable — trust the screen */ }
 
       const plan = planStartReminders(opts.gun, Date.now(), eligible);

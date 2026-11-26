@@ -22,6 +22,8 @@
     "tokenInvalidTitle": "Invalid verification link",
     "tokenInvalid": "This verification link is invalid or has expired. Please register again.",
     "tokenInvalidMaybeVerified": "This code can no longer be used. If you already completed this step, simply log in with your email and password. Otherwise, start again.",
+    "registerAgainTitle": "Code blocked",
+    "registerAgain": "This code can no longer be used. Please register again with the same email address to receive a new code.",
     "alreadyVerifiedTitle": "Already verified",
     "alreadyVerified": "This email has already been verified. Redirecting to login...",
     "tokenFailedTitle": "Verification failed",

@@ -96,10 +96,67 @@ async function verifyTokenOnServer(): Promise<void> {
   }
 }
 
+// ✅ In-session retry of a FAILED token registration (audit 2026-11-26 FPA).
+// The fan's first follow at the venue asks for notifications; if that
+// register_follower POST (or Expo's token fetch) failed, nothing retried until
+// the next foreground — no pushes meanwhile for a fan who keeps the app open.
+// Back-off, one timer at a time, stopped by a success (emitToken). Only the JS
+// context that armed it acts (a reload / a test must not post from a stale copy).
+let tokenRetryDelaysMs = [30000, 60000, 120000, 300000];
+let tokenRetryAttempt = 0;
+let tokenRetryTimer: ReturnType<typeof setTimeout> | null = null;
+const TOKEN_RETRY_ARMED_KEY = "@PFSLive:tokenRetryArmed";
+const tokenRetryOwner = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+
+function scheduleTokenRetry(): void {
+  if (tokenRetryTimer) return;
+  const delay = tokenRetryDelaysMs[Math.min(tokenRetryAttempt, tokenRetryDelaysMs.length - 1)];
+  tokenRetryAttempt++;
+  try { void AsyncStorage.setItem(TOKEN_RETRY_ARMED_KEY, tokenRetryOwner).catch(() => { /* best effort */ }); } catch { /* best effort */ }
+  try {
+    tokenRetryTimer = setTimeout(async () => {
+      tokenRetryTimer = null;
+      try {
+        if ((await AsyncStorage.getItem(TOKEN_RETRY_ARMED_KEY)) !== tokenRetryOwner) return;
+        if (currentToken) return;                 // registered meanwhile (foreground, a late POST)
+        // A failure inside schedules the next step; not granted → stops here.
+        await notificationPermissionService.registerIfGranted();
+      } catch { /* the next foreground retries */ }
+    }, delay);
+  } catch { tokenRetryTimer = null; }
+}
+
+// ✅ The 15-min server check and the 6 h re-send above ran only on a
+// FOREGROUND — a phone left on the live map for the whole race never had one
+// (audit 2026-11-26 FPC). The same check also runs on a timer while active;
+// it stays throttled by SERVER_CHECK_MS / TOKEN_RECHECK_MS, so this costs at
+// most one get_follower_data call per 15 min.
+let activeCheckMs = SERVER_CHECK_MS;
+let activeCheckTimer: ReturnType<typeof setInterval> | null = null;
+
+function runActiveTokenCheck(): void {
+  try { if (AppState.currentState !== "active") return; } catch { /* unknown → run */ }
+  void notificationPermissionService.registerIfGranted()
+    .then(() => verifyTokenOnServer())
+    .catch(() => { /* next tick */ });
+}
+
+function startActiveTokenCheck(): void {
+  if (activeCheckTimer) { clearInterval(activeCheckTimer); activeCheckTimer = null; }
+  if (activeCheckMs <= 0) return;
+  try { activeCheckTimer = setInterval(runActiveTokenCheck, activeCheckMs); } catch { activeCheckTimer = null; }
+}
+
+/** Tests only: shorter retry steps / active-check period (0 stops the period). */
+export function setTokenTimersForTests(opts: { retryMs?: number[]; activeCheckMs?: number }): void {
+  if (Array.isArray(opts.retryMs) && opts.retryMs.length > 0) tokenRetryDelaysMs = opts.retryMs.slice();
+  if (typeof opts.activeCheckMs === "number") { activeCheckMs = opts.activeCheckMs; startActiveTokenCheck(); }
+}
+
 const emitToken = (token: string | null) => {
   currentToken = token;
   // Just registered = just confirmed: no server check for SERVER_CHECK_MS.
-  if (token) { tokenCheckedAt = Date.now(); serverCheckedAt = Date.now(); }
+  if (token) { tokenCheckedAt = Date.now(); serverCheckedAt = Date.now(); tokenRetryAttempt = 0; }
   tokenListeners.forEach((l) => {
     try { l(token); } catch { /* listener errors must not break the others */ }
   });
@@ -255,6 +312,7 @@ function fetchAndRegisterToken(): Promise<string | null> {
             if (now?.status === "granted") emitToken(token);
           } catch { /* can't tell — the next foreground re-registers */ }
         }).catch(() => { /* failed — the next foreground retries */ });
+        scheduleTokenRetry();   // see scheduleTokenRetry (a late landing just makes it a no-op)
         return null;
       }
       // Switched off in Settings while this was in flight? Then don't
@@ -268,6 +326,7 @@ function fetchAndRegisterToken(): Promise<string | null> {
       return token;
     } catch (error) {
       if (API_CONFIG.DEBUG) console.error(`❌ Failed to get push token on ${Platform.OS}:`, error);
+      scheduleTokenRetry();     // Expo's token fetch failed / timed out — see scheduleTokenRetry
       return null;
     } finally {
       fetchInFlight = null;
@@ -378,3 +437,4 @@ AppState.addEventListener("change", (next) => {
       .catch(() => { /* next foreground */ });
   }
 });
+startActiveTokenCheck();   // see runActiveTokenCheck

@@ -26,7 +26,7 @@ import { usePendingRegistration } from '../../hooks/usePendingRegistration';
 import { API_CONFIG, getDeviceId } from '../../constants/config';
 import { useAuth } from '../../context/AuthContext';
 import { analyticsService } from '../../services/analyticsService';
-import { tryBeginSubmit, endSubmit, otpTokenInvalidKey } from '../../services/authFlowGuards';
+import { tryBeginSubmit, endSubmit, otpTokenInvalidKey, otpDeadEndKey } from '../../services/authFlowGuards';
 import { pendingOtpService } from '../../services/pendingOtpService';
 import { useLandscapeSidePadding, useSafeAreaEdges } from '../../hooks/useLandscapeSidePadding';
 
@@ -109,6 +109,19 @@ const OTPVerificationScreen: React.FC<OTPVerificationScreenProps> = ({
     },
     [otp]
   );
+
+  // ✅ A registration whose code can no longer be used (too many wrong codes or
+  // resends) is over (second audit 2026-11-26, AUB). The stored entry used to
+  // survive, so every login reopened this dead screen and "register again" was
+  // never said. Returns true when it handled the code.
+  const endDeadRegistration = useCallback(async (code: string): Promise<boolean> => {
+    const key = otpDeadEndKey(purpose, code);
+    if (!key) return false;
+    await pendingOtpService.clear();
+    setError(t(`otp:errors.${key}`));
+    Alert.alert(t('otp:errors.registerAgainTitle'), t(`otp:errors.${key}`));
+    return true;
+  }, [purpose, t]);
 
   const handleVerify = useCallback(
     async (otpCode?: string) => {
@@ -232,6 +245,7 @@ const OTPVerificationScreen: React.FC<OTPVerificationScreenProps> = ({
             break;
           case 'otp_max_attempts':
           case 'otp_too_many_attempts':
+            if (await endDeadRegistration(errorCode)) break;
             setError(t('otp:errors.tooManyAttempts'));
             showErrorToast(t('otp:errors.tooManyAttemptsTitle'), t('otp:errors.tooManyAttempts'));
             break;
@@ -265,6 +279,7 @@ const OTPVerificationScreen: React.FC<OTPVerificationScreenProps> = ({
             showErrorToast(t('otp:errors.genericErrorTitle'), t('otp:errors.genericError'));
             break;
           case 'otp_max_resends':
+            if (await endDeadRegistration(errorCode)) break;
             setError(t('otp:errors.maxResends'));
             showErrorToast(t('otp:errors.maxResendsTitle'), t('otp:errors.maxResends'));
             break;
@@ -290,7 +305,7 @@ const OTPVerificationScreen: React.FC<OTPVerificationScreenProps> = ({
     // `purpose` / `isDeviceChange` must be listed: they now drive which request
     // is sent and which copy is shown, so a stale closure would submit the
     // wrong purpose.
-    [otp, verification_token, purpose, isDeviceChange,isEmailChange, handleAfterAuth, login, showErrorToast, t, navigation]
+    [otp, verification_token, purpose, isDeviceChange,isEmailChange, handleAfterAuth, login, showErrorToast, t, navigation, endDeadRegistration]
   );
 
   const handleResend = useCallback(async () => {
@@ -316,6 +331,7 @@ const OTPVerificationScreen: React.FC<OTPVerificationScreenProps> = ({
       switch (errorCode) {
         case 'otp_too_many_attempts':
         case 'otp_max_attempts':
+          if (await endDeadRegistration(errorCode)) break;
           setError(t('otp:errors.tooManyAttempts'));
           showErrorToast(t('otp:errors.tooManyAttemptsTitle'), t('otp:errors.tooManyAttempts'));
           break;
@@ -325,6 +341,7 @@ const OTPVerificationScreen: React.FC<OTPVerificationScreenProps> = ({
         case 'otp_max_resends':
           // Resends are capped per request. Uncapped, they reset the wrong-code
           // counter and let a 6-digit code be brute-forced indefinitely.
+          if (await endDeadRegistration(errorCode)) break;
           setError(t('otp:errors.maxResends'));
           showErrorToast(t('otp:errors.maxResendsTitle'), t('otp:errors.maxResends'));
           break;
@@ -346,7 +363,7 @@ const OTPVerificationScreen: React.FC<OTPVerificationScreenProps> = ({
       setResending(false);
       endSubmit(resendingRef);
     }
-  }, [canResend, resending, verification_token, purpose, showErrorToast, t]);
+  }, [canResend, resending, verification_token, purpose, showErrorToast, t, endDeadRegistration]);
 
   return (
     <SafeAreaView style={commonStyles.container} edges={safeEdges}>

@@ -22,6 +22,8 @@
     "tokenInvalidTitle": "Lien de Vérification Invalide",
     "tokenInvalid": "Ce lien de vérification est invalide ou a expiré. Veuillez vous réinscrire.",
     "tokenInvalidMaybeVerified": "Ce code n’est plus utilisable. Si vous avez déjà terminé cette étape, connectez-vous simplement avec votre e-mail et votre mot de passe. Sinon, recommencez.",
+    "registerAgainTitle": "Code bloqué",
+    "registerAgain": "Ce code ne peut plus être utilisé. Veuillez vous réinscrire avec la même adresse e-mail pour recevoir un nouveau code.",
     "alreadyVerifiedTitle": "Déjà Vérifié",
     "alreadyVerified": "Cet e-mail a déjà été vérifié. Redirection vers la connexion...",
     "tokenFailedTitle": "Échec de la Vérification",

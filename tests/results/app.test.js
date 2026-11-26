@@ -795,6 +795,99 @@ const hasNot = (rel, snippet, msg) => assert.ok(!source(rel).includes(snippet), 
   });
   results.push(await run('26. re-audit EN1-EN5'));
 
+  // ════════ 27. Second audit 2026-11-26 (committed branch) ════════
+  test('RMA: back on the results list after 30 s+ → refreshed quietly (no spinner); sooner → not', async () => {
+    const calls = rankingMock();
+    const h = mountList();
+    calls[0].d.resolve(page(85, [1, 2, 3])); await flush();
+    M.focused = false; h.rerender(); await flush();
+    await advance(10000);
+    M.focused = true; h.rerender(); await flush();
+    assert.strictEqual(calls.length, 1, 'refreshed after only 10 s');
+    M.focused = false; h.rerender(); await flush();
+    await advance(40000);
+    M.focused = true; h.rerender(); await flush();
+    assert.strictEqual(calls.length, 2, 'stale list not refreshed on return');
+    assert.strictEqual(calls[1].p.page, 1);
+    assert.strictEqual(h.result.refreshing, false, 'no pull-to-refresh spinner');
+    assert.strictEqual(h.result.filterLoad, false, 'no filter overlay');
+    calls[1].d.resolve(page(85, [9, 8, 7])); await flush();
+    assert.deepStrictEqual(h.result.results.map((r) => r.bib), ['9', '8', '7']);
+  });
+  test('RMA: race in progress → refreshed every 60 s while on screen; not while away; a 429 pauses it', async () => {
+    const calls = rankingMock();
+    const h = mountList();
+    calls[0].d.resolve(page(85, [1, 2, 3])); await flush();   // page() is in_progress
+    await advance(60000);
+    assert.strictEqual(calls.length, 2, 'no live poll');
+    calls[1].d.reject({ type: 'server', code: 'rate limit exceeded.', data: { rateLimited: true, retryAfter: 150 } }); await flush();
+    assert.strictEqual(h.result.hasError, false, 'a quiet refresh must not show the error screen');
+    await advance(60000);
+    assert.strictEqual(calls.length, 2, 'polled inside the 150 s 429 pause');
+    await advance(120000);
+    assert.strictEqual(calls.length, 3);
+    calls[2].d.resolve(page(85, [1, 2, 3])); await flush();
+    M.focused = false; h.rerender(); await flush();
+    await advance(180000);
+    assert.strictEqual(calls.length, 3, 'polled while another screen was on top');
+  });
+  test('RMA: no quiet refresh once the user has loaded page 2 (it would throw those rows away)', async () => {
+    const calls = rankingMock();
+    const h = mountList();
+    calls[0].d.resolve(page(85, [1, 2, 3])); await flush();
+    h.result.onEndReached(); await flush();
+    calls[1].d.resolve(page(85, [4, 5, 6], 2)); await flush();
+    await advance(60000);
+    assert.strictEqual(calls.length, 2);
+  });
+
+  test('RMB: an auto refresh after a failed first load is a FULL load (distances, route, picker)', () => {
+    const { isFullLoad } = need('utils/liveMapRequests');
+    assert.ok(typeof isFullLoad === 'function', 'isFullLoad missing');
+    assert.strictEqual(isFullLoad(true, false), true, 'nothing shown yet');
+    assert.strictEqual(isFullLoad(true, true), false);
+    assert.strictEqual(isFullLoad(false, true), true);
+    has('screens/LiveTrackingScreen.tsx', 'const full = isFullLoad(autoRefresh, hasShownData.current);');
+    has('screens/LiveTrackingScreen.tsx', "            if (full) {\n                console.log('📋 Processing full response (distances + GPX)');");
+  });
+
+  test('RMC: home countdown counts the cache age (server_now_ts) — up to 45 s late before', () => {
+    mockModule('styles/common.styles', { commonStyles: {}, spacing: {}, palette: {}, space: {} });
+    mockModule('styles/home.styles', { homeStyles: {} });
+    mockModule('utils/timeFormat', { formatClockTime: (x) => x });
+    const { secondsToStart } = load('screens/FollowingLiveEventsSection');
+    const now = Date.now();
+    assert.strictEqual(secondsToStart(1800, now, now, Math.floor(now / 1000) - 45), 1755, 'answer was 45 s old');
+    assert.strictEqual(secondsToStart(1800, now, now + 10000, Math.floor(now / 1000) - 45), 1745);
+    assert.strictEqual(secondsToStart(1800, now, now, Math.floor(now / 1000) - 3600), 1800, 'phone clock off: arrival anchor');
+    assert.strictEqual(secondsToStart(1800, now, now), 1800, 'no server_now_ts: as before');
+    has('screens/FollowingLiveEventsSection.tsx', 'secondsToStart(event.starts_in_seconds, receivedAt, now, event.server_now_ts)');
+  });
+
+  test('RMD: the map route param follows the distance SHOWN, so the tab bar compares with it', () => {
+    const f = 'screens/LiveTrackingScreen.tsx';
+    has(f, "navigation.setParams({ selectedDistanceLabel: shown });");
+    has(f, 'lastLabelParam.current = shown;   // our own update: the effect above ignores it');
+    // tab bar: map now shows 25K (param synced) → asking for 25K is a plain pop, 10K switches
+    const { tabPlan } = need('utils/tabNavigation');
+    const routes = [{ name: 'HomeScreen', key: 'h' }, { name: 'LiveTracking', key: 'm', params: { product_app_id: 24, selectedDistanceLabel: '25K' } }, { name: 'ResultList', key: 'r', params: { product_app_id: 24 } }];
+    assert.strictEqual(tabPlan(routes, 2, 'LiveTracking', { product_app_id: 24, selectedDistanceLabel: '25K' }).setParamsKey, undefined);
+    assert.strictEqual(tabPlan(routes, 2, 'LiveTracking', { product_app_id: 24, selectedDistanceLabel: '10K' }).setParamsKey, 'm');
+  });
+
+  test('FPB: the map opened again for another event replaces itself; another distance id switches distance', () => {
+    const f = 'screens/LiveTrackingScreen.tsx';
+    has(f, "navigation.replace('LiveTracking', route.params);");
+    has(f, '}, [product_app_id, event_source, product_option_value_app_id]);');
+    has(f, 'const wanted = distances.find(d => d.product_option_value_app_id === Number(product_option_value_app_id));');
+  });
+
+  test('note: the follow refresh is focus-gated and respects the 429 pause', () => {
+    has('screens/LiveTrackingScreen.tsx', 'if (!isFocused || Date.now() < pausedUntil.current) return;');
+    has('screens/LiveTrackingScreen.tsx', '}, [followsKey, loading, isFocused]);');
+  });
+  results.push(await run('27. second audit'));
+
   const pass = results.reduce((n, r) => n + r.pass, 0);
   const fail = results.reduce((n, r) => n + r.fail, 0);
   console.log(`\n${pass} passed, ${fail} failed`);

@@ -93,6 +93,7 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
         retryUnconfirmed,
         retryingUnconfirmed,
         checkingStore,
+        storeUnavailable,
         paymentPending,
         purchasePendingApproval,
         resetPendingApproval,
@@ -630,6 +631,13 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
                             <Text style={styles.activationNote}>
                                 {t('membership:activation.note')}
                             </Text>
+                            {/* ✅ Buy stays blocked until StoreKit has been read (second audit
+                                PYC); when it cannot be, say so instead of a dead button. */}
+                            {storeUnavailable && activationBlock === 'checking' && (
+                                <Text style={styles.activationNote}>
+                                    {t('membership:activation.storeUnavailable')}
+                                </Text>
+                            )}
 
                             <TouchableOpacity
                                 // ✅ Dimmed whenever it cannot buy (layout audit 2026-11-26): a

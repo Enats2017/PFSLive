@@ -404,3 +404,31 @@ export function activationBuyBlock(s: {
   if (s.action && s.action !== 'subscribe') return 'action';
   return null;
 }
+
+/**
+ * ✅ May THIS call drive the user-facing purchase state (second audit PYA)?
+ * Only the call that will actually verify the transaction. StoreKit can deliver
+ * the same transaction twice; the duplicate came back in_flight /
+ * already_processed, yet its finally released the one-purchase gate and closed
+ * the processing modal while the first call was still verifying - Buy was live
+ * again mid-verify, the door to a second charge.
+ */
+export function ownsUserState(
+  purchase: PurchaseLike,
+  processed: ReadonlySet<string>,
+  processing: ReadonlySet<string>,
+): boolean {
+  const id = transactionIdOf(purchase);
+  return !(id && (processed.has(id) || processing.has(id)));
+}
+
+/**
+ * ✅ Per-account storage key (second audit PYF): which periods were confirmed
+ * and which transactions the server refused are answers for ONE account (a
+ * subscription linked to another account is fine for that other account).
+ * Kept per device, a second account on the phone inherited them.
+ */
+export function accountScopedKey(base: string, customerAppId: number | string | null | undefined): string {
+  const id = customerAppId === null || customerAppId === undefined || customerAppId === '' ? 'anon' : String(customerAppId);
+  return `${base}:${id}`;
+}

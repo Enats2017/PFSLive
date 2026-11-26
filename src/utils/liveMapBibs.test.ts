@@ -100,7 +100,8 @@ test('LiveTrackingScreen sends this event\'s followed bibs with every live-track
   assert.ok(/usersArray\.length > 0 \|\| eventBibs\.length > 0/.test(s), 'first load also starts for a bib-only follower');
   assert.ok(/\}, \[followedUsers, eventBibsKey, product_option_value_app_id\]\)/.test(s), 'first-load effect re-arms when the bibs arrive');
   assert.ok(/liveFollowsKey\(followedUsers, eventBibs\)/.test(s), 'one key for followed accounts + bibs');
-  assert.ok(/\}, \[followsKey, loading\]\)/.test(s), 'a follow change (bib or account) refreshes the map, also once a load in flight ends');
+  // + isFocused (second audit 2026-11-26): the follow refresh runs while the map is on top.
+  assert.ok(/\}, \[followsKey, loading, isFocused\]\)/.test(s), 'a follow change (bib or account) refreshes the map, also once a load in flight ends');
   assert.ok(/sentFollowsKey\.current === followsKey\) return;/.test(s), 'no extra request when the follows were already sent');
   const set = s.indexOf('sentFollowsKey.current = followsKey;');
   assert.ok(set > 0 && set < s.indexOf('await liveTrackingService.getLiveTrackingData('), 'every request records the follows it carries');

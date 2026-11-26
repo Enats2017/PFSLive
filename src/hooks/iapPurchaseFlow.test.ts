@@ -27,6 +27,8 @@ import {
   validAppAccountToken,
   activationBuyBlock,
   openPaidConsumables,
+  ownsUserState,
+  accountScopedKey,
   type PurchaseFlowDeps,
   type PurchaseLike,
   type ResolveConsumable,
@@ -741,6 +743,59 @@ test('every re-audit Membership string exists in en, fr and nl', () => {
     assert.ok(vals[0] !== vals[1] && vals[0] !== vals[2], `${k} not translated`);
     assert.ok(new RegExp(`membership:${k.replace('.', '\\.')}`).test(screenCode), `${k} not used`);
   }
+});
+
+
+/* ══════════════════════════════════════════════════════════════════════
+ *  Second audit 2026-11-26 (PYA, PYB, PYC, PYF, app side). Each fails on the
+ *  committed branch (177b9be).
+ * ══════════════════════════════════════════════════════════════════════ */
+console.log('\nsecond audit 2026-11-26');
+
+test('PYA a duplicate StoreKit event for a transaction being verified does not own the user state', async () => {
+  const processed = new Set<string>();
+  const processing = new Set<string>();
+  const p = { id: 't9', transactionId: 't9', productId: SINGLE };
+  assert.strictEqual(ownsUserState(p, processed, processing), true, 'first delivery owns it');
+  processing.add('t9');
+  assert.strictEqual(ownsUserState(p, processed, processing), false, 'duplicate mid-verify');
+  processing.delete('t9'); processed.add('t9');
+  assert.strictEqual(ownsUserState(p, processed, processing), false, 'duplicate after verify');
+  // and the hook decides with it BEFORE touching the modal / gate
+  const h = code.slice(code.indexOf('const handlePurchase = useCallback('), code.indexOf('const runRecoveryPass'));
+  const own = h.indexOf('ownsUserState(purchase, processedTransactions.current, processingRef.current)');
+  const setup = h.indexOf('setPurchaseLoading(true)');
+  assert.ok(own > 0 && setup > own, 'ownership is decided before the modal opens');
+  assert.ok(/userInitiatedEvent && ownsUserState\(/.test(h));
+});
+
+test('PYB Restore counts a transaction a recovery pass is verifying right now as pending', () => {
+  assert.ok(/if \(flow\.outcome === "in_flight"\) queued\+\+;/.test(code));
+});
+
+test('PYC Buy is never unblocked by a timer before StoreKit was read; an unreachable store is said', () => {
+  assert.ok(!/setTimeout\(\(\) => setCheckingStore\(false\)/.test(code), 'no timed unblock');
+  const sets = code.match(/setCheckingStore\(false\)/g) ?? [];
+  assert.strictEqual(sets.length, 1, 'only after Transaction.all was read');
+  const pass = code.slice(code.indexOf('const runRecoveryPass'), code.indexOf('const recoveryDoneRef'));
+  assert.ok(pass.indexOf('getStorePurchases(') < pass.indexOf('setCheckingStore(false)'));
+  assert.ok(/setStoreUnavailable\(true\)/.test(code));
+  assert.ok(/storeUnavailable && activationBlock === 'checking'/.test(screenCode));
+  assert.ok(/membership:activation\.storeUnavailable/.test(screenCode));
+  const langs = ['en', 'fr', 'nl'].map((l) =>
+    JSON.parse(fs.readFileSync(path.join(process.cwd(), 'src', 'i18n', 'Membership', `${l}.json`), 'utf8')).activation?.storeUnavailable);
+  assert.ok(langs.every((v) => typeof v === 'string' && v.length > 0) && langs[0] !== langs[1] && langs[0] !== langs[2]);
+});
+
+test('PYF confirmed / permanent-refusal sets are per account, unconfirmed stays per device', () => {
+  assert.strictEqual(accountScopedKey('@k', 42), '@k:42');
+  assert.strictEqual(accountScopedKey('@k', null), '@k:anon');
+  assert.notStrictEqual(accountScopedKey('@k', 1), accountScopedKey('@k', 2));
+  assert.ok(/AsyncStorage\.getItem\(await scoped\(CONFIRMED_KEY\)\)/.test(recoverySrc));
+  assert.ok(/AsyncStorage\.setItem\(await scoped\(CONFIRMED_KEY\)/.test(recoverySrc));
+  assert.ok(/loadIdSet\(await scoped\(PERMANENT_KEY\)\)/.test(recoverySrc));
+  assert.ok(/setIdIn\(await scoped\(PERMANENT_KEY\), id, true\)/.test(recoverySrc));
+  assert.ok(/loadIdSet\(UNCONFIRMED_KEY\)/.test(recoverySrc));
 });
 
 Promise.all(pending).then(() => {

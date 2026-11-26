@@ -25,6 +25,8 @@ import {
   profileDraftDiff,
   usableProfileDraft,
   PROFILE_DRAFT_MAX_AGE_MS,
+  otpDeadEndKey,
+  pendingVerifyFailedOnField,
 } from './authFlowGuards';
 import { readStoredDeviceIdFrom, resolveUnstoredDeviceId } from './deviceIdStore';
 
@@ -170,6 +172,20 @@ test('profile draft: only changed fields, never passwords; same account and < 24
   assert.strictEqual(usableProfileDraft('{bad', 7, now), null);
 });
 
+test('registration dead ends: only for registration, only the blocking codes (AUB)', () => {
+  assert.strictEqual(otpDeadEndKey('registration', 'otp_max_attempts'), 'registerAgain');
+  assert.strictEqual(otpDeadEndKey('registration', 'otp_too_many_attempts'), 'registerAgain');
+  assert.strictEqual(otpDeadEndKey('registration', 'otp_max_resends'), 'registerAgain');
+  assert.strictEqual(otpDeadEndKey('registration', 'otp_incorrect'), null);
+  assert.strictEqual(otpDeadEndKey('device_change', 'otp_max_attempts'), null);
+});
+
+test('pending-email verify: "taken" only for an address error (AUE)', () => {
+  assert.strictEqual(pendingVerifyFailedOnField(['email_already_taken']), true);
+  assert.strictEqual(pendingVerifyFailedOnField(undefined), false, '401 / offline have no field errors');
+  assert.strictEqual(pendingVerifyFailedOnField(['city_invalid']), false);
+});
+
 // ── Wiring: the real files ───────────────────────────────────────────────────
 const ROOT = path.resolve(process.env.AUTH_TEST_ROOT || process.cwd());
 const read = (rel: string) => {
@@ -307,6 +323,31 @@ test('Edit Profile keeps unsaved changes across a logout and offers them back (r
     const prof = JSON.parse(read(`i18n/ProfileScreen/${lang}.json`) || '{}');
     assert.ok(prof.messages?.draft_restored && prof.messages?.draft_restored_title, `${lang} copy`);
   }
+});
+
+test('a dead registration code clears the stored entry and says "register again", on verify AND resend (AUB)', () => {
+  const s = read('screens/AuthScreens/OTPVerificationScreen.tsx');
+  const dead = between(s, 'const endDeadRegistration = useCallback(', 'const handleVerify');
+  assert.ok(/otpDeadEndKey\(purpose, code\)/.test(dead) && /pendingOtpService\.clear\(\)/.test(dead), 'helper missing');
+  const v = between(s, 'const handleVerify = useCallback(', 'const handleResend');
+  const r = between(s, 'const handleResend = useCallback(', 'return (');
+  for (const [name, body] of [['verify', v], ['resend', r]] as const) {
+    const n = (body.match(/await endDeadRegistration\(errorCode\)/g) || []).length;
+    assert.strictEqual(n, 2, `${name}: max_attempts and max_resends both end the registration (got ${n})`);
+  }
+  for (const lang of ['en', 'fr', 'nl']) {
+    const otp = JSON.parse(read(`i18n/OtpScreen/${lang}.json`) || '{}');
+    assert.ok(otp.errors?.registerAgain && otp.errors?.registerAgainTitle, `${lang} copy`);
+  }
+});
+
+test('pending-email "verify" sends ONLY the email and reports non-field failures as such (AUE)', () => {
+  const s = read('screens/AuthScreens/EditProfileScreen.tsx');
+  const h = between(s, 'const handleVerifyPending = useCallback(', 'const handleCancelPending');
+  assert.ok(/submit\(\{ email: serverPendingEmail \}, \{ onlyEmail: true \}\)/.test(h), 'whole form submitted (draft saved silently)');
+  assert.ok(/pendingVerifyFailedOnField\(result\.fieldErrors\)/.test(h) && /reportSaveFailure\(/.test(h), '401 / offline shown as "address taken"');
+  const hook = read('hooks/Useeditprofile.ts');
+  assert.ok(/opts\?\.onlyEmail \? \{ email: effective\.email\.trim\(\)\.toLowerCase\(\) \}/.test(hook), 'payload not email-only');
 });
 
 Promise.all(pending).then(() => {

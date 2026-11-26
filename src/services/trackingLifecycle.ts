@@ -30,6 +30,11 @@ export const STOP_STUCK_MS = 120 * 1000;
 
 let _stoppingAt = 0;
 let _stopping = false;
+// ✅ When the current claim began — touchStop never moves it (2026-11-26 second
+// audit): a truly hung Stop, touched on every foreground, could hold the lock
+// for ever. No claim outlives STOP_HARD_MAX_MS.
+let _claimedAt = 0;
+export const STOP_HARD_MAX_MS = 10 * 60 * 1000;
 let _claim = 0;
 // Who holds the lock: a real Stop, or HomeScreen's retry of an earlier Stop /
 // finish log upload (drain-pending-finish). The retry is short (one upload,
@@ -61,7 +66,7 @@ let _startEpoch = 0;
 export const trackingLifecycle = {
   /** True while a Stop (or the log retry) holds the lock (and is not hung). */
   isStopping(now: number = Date.now()): boolean {
-    return _stopping && now - _stoppingAt < STOP_STUCK_MS;
+    return _stopping && now - _stoppingAt < STOP_STUCK_MS && now - _claimedAt < STOP_HARD_MAX_MS;
   },
 
   /** Who holds the lock right now, or null. */
@@ -111,6 +116,7 @@ export const trackingLifecycle = {
     if (this.isStopping(now)) return null;
     _stopping = true;
     _stoppingAt = now;
+    _claimedAt = now;
     _holder = kind;
     if (kind === 'stop') _stopEpoch++;
     const mine = ++_claim;
@@ -131,9 +137,17 @@ export const trackingLifecycle = {
     return !this.isStopping();
   },
 
-  /** A Stop arriving while only the log retry holds the lock waits for it (≤ LOG_RETRY_WAIT_MS). */
+  /**
+   * A Stop arriving while only the log retry holds the lock waits for it
+   * (≤ LOG_RETRY_WAIT_MS) — and stops waiting the moment a REAL Stop holds it
+   * (2026-11-26 second audit: two Stops waiting on the retry both ran, one after
+   * the other — the second a full Stop with home ids and an extra toast).
+   */
   async waitForLogRetry(): Promise<void> {
-    if (this.holder() === 'logRetry') await this.waitUntilFree(LOG_RETRY_WAIT_MS);
+    for (let i = 0; i * POLL_MS < LOG_RETRY_WAIT_MS; i++) {
+      if (this.holder() !== 'logRetry') return;
+      await new Promise((r) => setTimeout(r, POLL_MS));
+    }
   },
 
   /** A Start finished on a HomeScreen that is no longer mounted. */

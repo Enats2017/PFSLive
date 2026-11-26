@@ -55,7 +55,8 @@
     "name": "Eenmalige activatie",
     "description": "Eén trackingsessie, een jaar geldig.",
     "note": "Eenmalige aankoop — wordt niet verlengd. Koop er een nieuwe wanneer je er een nodig hebt.",
-    "buy": "Kopen"
+    "buy": "Kopen",
+    "storeUnavailable": "De App Store is momenteel niet bereikbaar, dus aankopen zijn niet mogelijk. Probeer het later opnieuw."
   },
   "footerNote": "Jaarlijks abonnement, wordt automatisch verlengd.\nOp elk moment opzegbaar. Prijs weergegeven door de App Store.",
   "legal": {

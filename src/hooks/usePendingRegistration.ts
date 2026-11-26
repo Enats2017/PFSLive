@@ -6,6 +6,7 @@ import { isPendingRegistrationFresh } from '../screens/EventDetails/registration
 import { shouldNoticeExpiredConnect } from '../services/authFlowGuards';
 import { toastInfo } from '../../utils/toast';
 import i18n from '../i18n';
+import { PERSONAL_EVENT_DRAFT_KEY, hasPendingDraft } from '../screens/PersonalEventScreen/personalEventGuards';
 
 const PENDING_PRODUCT_KEY = 'pending_product_app_id';
 const PENDING_OPTION_KEY = 'pending_option_value_app_id';
@@ -185,6 +186,16 @@ export const usePendingRegistration = (navigation: NavigationProp<any>) => {
             i18n.t('login:pendingConnectExpiredTitle'),
             i18n.t('login:pendingConnectExpired'),
           );
+        }
+        // ✅ A personal event left at the login (second audit 2026-11-26):
+        // the 401 on Save kept the form as a draft; go back to it (Home
+        // underneath) instead of Home. CreatePersonalEvent restores it.
+        if (hasPendingDraft(await safeGetItem(PERSONAL_EVENT_DRAFT_KEY), Date.now())) {
+          navigation.reset({
+            index: 1,
+            routes: [{ name: 'HomeScreen' }, { name: 'PersonalEvent' }],
+          });
+          return;
         }
         // No pending registration, go to Home
         if (API_CONFIG.DEBUG) {

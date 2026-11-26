@@ -74,12 +74,38 @@ export const editTimezoneToSend = (p: {
   loadedDate: string;
   loadedStartTime: string;
   deviceTimezone: string;
+  loadedTimezone?: string;
 }): string | undefined => {
-  const changed =
-    (p.date ?? '') !== (p.loadedDate ?? '') ||
-    editStartHourValue(p.startTime) !== editStartHourValue(p.loadedStartTime);
-  return changed ? p.deviceTimezone : undefined;
+  // ✅ Second audit 2026-11-26: a start TIME moved abroad re-zoned the event to
+  // the phone's zone too (09:00 Brussels became 09:00 Tokyo). The stored zone
+  // is kept unless the DATE changed or the event has none.
+  const dateChanged = (p.date ?? '') !== (p.loadedDate ?? '');
+  const hasZone = !!(p.loadedTimezone ?? '').trim();
+  // loadedTimezone undefined = a caller that does not know it: previous rule.
+  if (p.loadedTimezone === undefined) {
+    const changed = dateChanged || editStartHourValue(p.startTime) !== editStartHourValue(p.loadedStartTime);
+    return changed ? p.deviceTimezone : undefined;
+  }
+  return dateChanged || !hasZone ? p.deviceTimezone : undefined;
 };
+
+/**
+ * True when the edit moves the gun (date or start time). Only then do the
+ * start reminders of that event go (second audit 2026-11-26): a plain rename
+ * of Home's next race cancelled its reminders on every save.
+ */
+export const editMovesGun = (p: { date: string; startTime: string; loadedDate: string; loadedStartTime: string }): boolean =>
+  (p.date ?? '') !== (p.loadedDate ?? '') ||
+  editStartHourValue(p.startTime) !== editStartHourValue(p.loadedStartTime);
+
+/**
+ * Top-level gpx_* codes the create endpoint returned without `fields` (second
+ * audit 2026-11-26) — a file that can never succeed then got the generic
+ * "try again later". Mapped to the file field like the validation codes.
+ */
+export const GPX_ERROR_CODES = ['gpx_too_large', 'gpx_invalid_type', 'gpx_invalid_content', 'gpx_upload_failed', 'gpx_save_failed', 'gpx_read_failed'] as const;
+export const isGpxErrorCode = (code: string | null | undefined): boolean =>
+  !!code && (GPX_ERROR_CODES as readonly string[]).includes(code);
 
 // gpsService's TRACKING_PARAMS_KEY, re-declared by its literal value to avoid
 // importing gpsService (same convention as locationQueueService).
@@ -144,6 +170,12 @@ export interface PersonalEventDraft {
 
 export const serializeDraft = (d: Omit<PersonalEventDraft, 'savedAt'>, now: number): string =>
   JSON.stringify({ ...d, savedAt: now });
+
+/**
+ * True when a usable create draft waits (second audit 2026-11-26): after a
+ * login the runner is brought back to the create form instead of Home.
+ */
+export const hasPendingDraft = (raw: string | null | undefined, now: number): boolean => parseDraft(raw, now) !== null;
 
 /** The stored draft, or null when there is none, it is unreadable or older than a day. */
 export const parseDraft = (raw: string | null | undefined, now: number): PersonalEventDraft | null => {

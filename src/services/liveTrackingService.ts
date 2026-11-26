@@ -4,6 +4,7 @@ import { getCurrentLanguageId } from '../i18n';
 import { liveTrackingBibsParam } from '../utils/liveMapBibs';
 import { fetchWithTimeout, FetchTimeoutError, parseRetryAfter } from '../utils/fetchWithTimeout';
 import { AppError } from './api';
+import { rememberBibOwners } from '../utils/followStorage';
 
 // ✅ Deadline for one live-map request (app audit 2026-11-26). Android fetch
 // has no timeout of its own: a hung first load left the spinner up forever
@@ -216,6 +217,15 @@ class LiveTrackingService {
             // `null` would crash the screen on .length) reads as "nobody yet".
             if (data.data && !Array.isArray(data.data.participants)) {
                 data.data.participants = [];
+            }
+
+            // ✅ The map resolves followed runners to their account: keep the
+            // bib → athlete links (followStorage rememberBibOwners), so unfollowing
+            // the athlete elsewhere drops this event's bib follow too (audit
+            // 2026-11-26 FN1). Partner events only — custom events number their
+            // products from another table (see liveTrackingBibsParam). Fire-and-forget.
+            if ((eventSource ?? 'partner') === 'partner' && Array.isArray(data.data?.participants)) {
+                void rememberBibOwners(productAppId, data.data.participants as any[]);
             }
 
             return data;

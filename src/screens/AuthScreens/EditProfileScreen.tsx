@@ -22,7 +22,7 @@ import { useLandscapeSidePadding, useSafeAreaEdges } from '../../hooks/useLandsc
 import NoticeCard from '../../components/NoticeCard'
 import { ANALYTICS_SCREENS } from '../../constants/analyticsScreens'
 import { EMAIL_REGEX, useEditProfile } from '../../hooks/Useeditprofile'
-import { EditProfileFailure, profileDraftDiff } from '../../services/authFlowGuards'
+import { EditProfileFailure, profileDraftDiff, pendingVerifyFailedOnField } from '../../services/authFlowGuards'
 import { profileDraftService } from '../../services/profileDraftService'
 import { needsParentConsent } from '../../services/validation/authValidation'
 import { fetchProfileApi } from '../../services/profileServices'
@@ -376,7 +376,10 @@ const EditProfileScreen = () => {
         if (!serverPendingEmail || pendingBusy) return
         setPendingBusy(true)
         try {
-            const result = await submit({ email: serverPendingEmail })
+            // ✅ ONLY the email (second audit 2026-11-26, AUE): the whole form used
+            // to go with it, so a restored draft / half-typed edit was saved by a
+            // tap on "verify my email" without the user ever pressing Save.
+            const result = await submit({ email: serverPendingEmail }, { onlyEmail: true })
 
             if (result.ok && result.emailChangeToken && result.pendingEmail) {
                 navigation.navigate('OTPVerificationScreen', {
@@ -387,11 +390,18 @@ const EditProfileScreen = () => {
                 return
             }
 
-            // The realistic failure is email_already_taken — another account
-            // claimed the address while it sat here unconfirmed. That error
-            // arrives as an inline field error, but the field is showing the
-            // *confirmed* address, so leaving it there would be misleading.
-            // Clear it, say what happened, and re-read the pending state.
+            if (!pendingVerifyFailedOnField(result.fieldErrors)) {
+                // Offline, a dead session, a server error: say THAT and leave the
+                // field alone - it was being reported as "address taken".
+                reportSaveFailure(result.failure ?? 'generic')
+                return
+            }
+
+            // email_already_taken — another account claimed the address while it
+            // sat here unconfirmed. That error arrives as an inline field error,
+            // but the field is showing the *confirmed* address, so leaving it
+            // there would be misleading. Clear it, say what happened, and re-read
+            // the pending state.
             setField('email', form.email)
             toastError(
                 t('profile:emailChange.resend_failed_title'),
@@ -401,7 +411,7 @@ const EditProfileScreen = () => {
         } finally {
             setPendingBusy(false)
         }
-    }, [serverPendingEmail, pendingBusy, submit, navigation, t, loadProfile, setField, form.email])
+    }, [serverPendingEmail, pendingBusy, submit, navigation, t, loadProfile, setField, form.email, reportSaveFailure])
 
     // ✅ Clearing the staged address needs an explicit flag — re-submitting the
     // confirmed email is a no-op server-side (and returns `no_changes` when

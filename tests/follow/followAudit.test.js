@@ -39,6 +39,9 @@ Module._load = function (request, parent) {
       && parent && /useResultList\.ts$/.test(parent.filename || '')) {
     return { resultList: hooks.resultList };
   }
+  if (request === '../i18n' && parent && /services[\\/]liveTrackingService\.ts$/.test(parent.filename || '')) {
+    return { getCurrentLanguageId: () => 1 };
+  }
   if (request === './registerFollowerServices' && hooks.followerApi
       && parent && /notificationPermissionService\.ts$/.test(parent.filename || '')) {
     return { followerApi: hooks.followerApi };
@@ -435,6 +438,86 @@ const verifyFetch = (delays) => {
       M.appStateListeners.forEach((l) => l('active')); await sleep(30);
       assert.strictEqual(M.fapi.registerCalls.length, 1);
     } finally { hooks.followerApi = null; }
+  });
+
+  // ── FN1 rest: the live map learns the links too ─────────────────────────
+  const liveFetch = (participants) => {
+    global.fetch = async () => ({ ok: true, status: 200, headers: { get: () => null },
+      json: async () => ({ success: true, data: { participants }, error: null }) });
+  };
+  test('FN1 the live map (partner event) learns bib → athlete; an athlete-only unfollow then drops the bib follow', async () => {
+    const fs_ = load('utils/followStorage');
+    M.store.set('FOLLOWER_ID', '501');
+    await fs_.followBib(13, '640');
+    await fs_.followUser(7);
+    liveFetch([{ id: 1, customer_app_id: 7, bib_number: 640 }]);
+    try {
+      const { liveTrackingService } = load('services/liveTrackingService');
+      await liveTrackingService.getLiveTrackingData(13, [7], 85, false, 'partner', ['640']);
+      await sleep(20);
+      await fs_.unfollowUser(7);
+      assert.strictEqual(await fs_.isBibFollowed(13, '640'), false);
+    } finally { delete global.fetch; }
+  });
+  test('FN1 a custom event map never creates links (other id space)', async () => {
+    const fs_ = load('utils/followStorage');
+    M.store.set('FOLLOWER_ID', '501');
+    await fs_.followBib(13, '640');
+    await fs_.followUser(7);
+    liveFetch([{ id: 1, customer_app_id: 7, bib_number: 640 }]);
+    try {
+      const { liveTrackingService } = load('services/liveTrackingService');
+      await liveTrackingService.getLiveTrackingData(13, [7], 85, false, 'custom', []);
+      await sleep(20);
+      await fs_.unfollowUser(7);
+      assert.strictEqual(await fs_.isBibFollowed(13, '640'), true);
+    } finally { delete global.fetch; }
+  });
+
+  // ── FPA failed token registration retried in-session ────────────────────
+  test('FPA a failed register_follower POST is retried on a back-off timer and stops after success', async () => {
+    M.notif.status = 'granted';
+    M.fapi.registerFail = true;
+    const mod = load('services/notificationPermissionService');
+    assert.strictEqual(typeof mod.setTokenTimersForTests, 'function', 'token retry exists');
+    mod.setTokenTimersForTests({ retryMs: [40, 80] });
+    const np = mod.notificationPermissionService;
+    assert.strictEqual(await np.registerIfGranted(), null);
+    assert.strictEqual(M.fapi.registerCalls.length, 1);
+    await sleep(70);                                  // retry 1 fails too
+    assert.strictEqual(M.fapi.registerCalls.length, 2);
+    M.fapi.registerFail = false;
+    await sleep(140);                                 // retry 2 succeeds
+    assert.strictEqual(M.fapi.registerCalls.length, 3);
+    assert.strictEqual(np.getCurrentToken(), M.notif.token, 'registered');
+    await sleep(200);
+    assert.strictEqual(M.fapi.registerCalls.length, 3, 'stopped after success');
+  });
+
+  // ── FPC token check also while the app stays active ─────────────────────
+  test('FPC the 15-min server check also runs on a timer while the app stays active (no foreground)', async () => {
+    M.notif.status = 'granted';
+    let checks = 0;
+    hooks.followerApi = {
+      registerFollower: async (tok) => { M.fapi.registerCalls.push(tok); return { follower_id: 501 }; },
+      getFollowerData: async () => { checks++; throw Object.assign(new Error('follower_not_found'), { type: 'empty', code: 'follower_not_found' }); },
+    };
+    let mod = null;
+    try {
+      mod = load('services/notificationPermissionService');
+      assert.strictEqual(typeof mod.setTokenTimersForTests, 'function', 'active check exists');
+      await mod.notificationPermissionService.registerIfGranted();
+      mod.setTokenTimersForTests({ activeCheckMs: 30 });
+      await sleep(80);
+      assert.strictEqual(checks, 0, 'throttled: within 15 min of registering');
+      M.clock += 16 * 60 * 1000;
+      await sleep(80);
+      assert.strictEqual(checks, 1, 'checked by the timer');
+      assert.strictEqual(M.fapi.registerCalls.length, 2, 'token re-sent');
+    } finally {
+      if (mod && mod.setTokenTimersForTests) mod.setTokenTimersForTests({ activeCheckMs: 0 });
+      hooks.followerApi = null;
+    }
   });
 
   const r = await run('follow / favourites / push audit 2026-11-26');

@@ -238,10 +238,16 @@ test('RN1: register and unregister send the phone id (per-phone rate limit at th
 });
 
 test('RN2: coming back to the event screen, or a refresh_nonce link, refetches past the cache', () => {
-  assert.ok(/fetchDistances\(focusedBeforeRef\.current \|\| !!refresh_nonce\)/.test(tab), 'refocus busts the cache');
+  assert.ok(/fetchDistances\(returning \|\| !!refresh_nonce, returning\)/.test(tab), 'refocus busts the cache');
   assert.ok(/if \(!refresh_nonce \|\| refresh_nonce === lastNonceRef\.current\) return;/.test(tab), 'a new nonce refetches');
   const ed = read('screens/EventDetails/EventDetails.tsx');
   assert.ok(ed.includes('refresh_nonce={refresh_nonce}'), 'EventDetails passes it on');
+});
+
+test('RE: coming back to the event screen refetches silently (no full-screen spinner)', () => {
+  const f = block(tab, 'const focusedBeforeRef = useRef(false);', 'const lastNonceRef');
+  assert.ok(/const returning = focusedBeforeRef\.current;/.test(f), 'knows it is a return');
+  assert.ok(/fetchDistances\([^)]*, returning\)/.test(f), 'silent when returning');
 });
 
 test('RN4: every Connect / Undo is off while any register / unregister call runs', () => {

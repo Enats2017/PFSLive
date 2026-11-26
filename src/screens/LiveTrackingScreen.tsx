@@ -21,7 +21,7 @@ import { useFollowManager } from '../hooks/useFollowManager';
 import { followedBibsForEvent } from '../utils/liveMapBibs';
 import {
     isCurrentLiveResponse, dropClearsLoading, ownsError, liveFollowsKey,
-    failureShowsErrorScreen, shouldRunAutoRefresh, rateLimitPauseMs, liveRefreshMs,
+    failureShowsErrorScreen, shouldRunAutoRefresh, rateLimitPauseMs, liveRefreshMs, isFullLoad,
 } from '../utils/liveMapRequests';
 import { isRateLimited } from '../services/api';
 import { useFocusEffect, useIsFocused } from '@react-navigation/native';
@@ -352,11 +352,14 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
     // `loading` is a dep and sentFollowsKey remembers what the last request
     // carried: follows that arrive WHILE a load is in flight are sent as soon as
     // it ends (the effect used to return on `loading` and never re-run).
+    // ✅ Only while the map is on top and not inside a 429 pause (second audit
+    // 2026-11-26) — like the timer. The next refresh carries the follows anyway.
     useEffect(() => {
         if (!hasLoadedInitialData.current || loading) return;
+        if (!isFocused || Date.now() < pausedUntil.current) return;
         if (sentFollowsKey.current === followsKey) return;
         loadLiveTrackingData(true);
-    }, [followsKey, loading]);
+    }, [followsKey, loading, isFocused]);
 
     // Back on this screen (e.g. from Result Details, where a runner was just
     // followed): re-read the follows. useFollowManager only loads them on
@@ -421,6 +424,11 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
         };
         inFlightDistance.current.set(seq, null);
         if (autoRefresh) autoInFlight.current++;
+        // ✅ A refresh is FULL (distances, route, elevation) while nothing has
+        // been shown yet (second audit 2026-11-26): after a failed first load
+        // the auto refresh that succeeded cleared the error but skipped the
+        // distances and the GPX — a map with no route, profile or picker.
+        const full = isFullLoad(autoRefresh, hasShownData.current);
         try {
             if (!autoRefresh) {
                 setLoading(true);
@@ -521,7 +529,7 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
             }
             setParticipants(response.data.participants);
 
-            if (!autoRefresh) {
+            if (full) {
                 console.log('📋 Processing full response (distances + GPX)');
 
                 if (response.data.distances && response.data.distances.length > 0) {
@@ -790,6 +798,39 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
             void handleDistanceChange(wanted);
         }
     }, [selectedDistanceLabel, distances]);
+
+    // ✅ The route param follows the distance SHOWN (second audit 2026-11-26):
+    // the tab bar decides whether to switch the map by comparing the distance
+    // the list asks for with this param — it used to be the label the map was
+    // OPENED with, not the one picked here in the map since.
+    useEffect(() => {
+        const shown = selectedDistance?.distance_name;
+        if (!shown || shown === selectedDistanceLabel) return;
+        lastLabelParam.current = shown;   // our own update: the effect above ignores it
+        navigation.setParams({ selectedDistanceLabel: shown });
+    }, [selectedDistance?.distance_name]);
+
+    // ✅ Opened again for ANOTHER event while this map is on top (a push tap, a
+    // popup "View" — navigate() then only replaces the params of this route;
+    // pre-existing, second audit 2026-11-26): its state belongs to the old
+    // event, so a fresh map replaces it. The same event with another distance
+    // id switches distance here.
+    const openedFor = useRef({ product_app_id, event_source, product_option_value_app_id });
+    useEffect(() => {
+        const o = openedFor.current;
+        if (String(o.product_app_id) !== String(product_app_id) || (o.event_source ?? 'partner') !== (event_source ?? 'partner')) {
+            openedFor.current = { product_app_id, event_source, product_option_value_app_id };
+            navigation.replace('LiveTracking', route.params);
+            return;
+        }
+        if (Number(o.product_option_value_app_id || 0) !== Number(product_option_value_app_id || 0)) {
+            openedFor.current = { ...o, product_option_value_app_id };
+            const wanted = distances.find(d => d.product_option_value_app_id === Number(product_option_value_app_id));
+            if (wanted && wanted.product_option_value_app_id !== selectedDistance?.product_option_value_app_id) {
+                void handleDistanceChange(wanted);
+            }
+        }
+    }, [product_app_id, event_source, product_option_value_app_id]);
 
     const hasGpx = !!routeData;
     const hasCheckpoints = apiCheckpoints != null && apiCheckpoints.length > 0;

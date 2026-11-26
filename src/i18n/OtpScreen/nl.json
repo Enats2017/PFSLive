@@ -22,6 +22,8 @@
     "tokenInvalidTitle": "Ongeldige Verificatielink",
     "tokenInvalid": "Deze verificatielink is ongeldig of verlopen. Registreer opnieuw.",
     "tokenInvalidMaybeVerified": "Deze code kan niet meer gebruikt worden. Hebt u deze stap al voltooid? Meld u dan gewoon aan met uw e-mailadres en wachtwoord. Begin anders opnieuw.",
+    "registerAgainTitle": "Code geblokkeerd",
+    "registerAgain": "Deze code kan niet meer gebruikt worden. Registreer opnieuw met hetzelfde e-mailadres om een nieuwe code te ontvangen.",
     "alreadyVerifiedTitle": "Al Geverifieerd",
     "alreadyVerified": "Dit e-mailadres is al geverifieerd. Doorsturen naar login...",
     "tokenFailedTitle": "Verificatie Mislukt",

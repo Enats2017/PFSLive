@@ -26,7 +26,7 @@ import { EditPersonalEventpops } from '../../types/navigation';
 import { toastError, toastSuccess } from '../../../utils/toast';
 import { FileCard } from '../../components/FileCard';
 import { useLandscapeSidePadding, useSafeAreaEdges } from '../../hooks/useLandscapeSidePadding';
-import { tryBeginSubmit, endSubmit, hasNoMappedField, editTimezoneToSend, isTrackingRecent } from './personalEventGuards';
+import { tryBeginSubmit, endSubmit, hasNoMappedField, editTimezoneToSend, isTrackingRecent, editMovesGun } from './personalEventGuards';
 import {
   EDIT_EVENT_DRAFT_KEY, EditDraftValues, editDraftSnapshot, editDraftDiff, serializeEditDraft, usableEditDraft,
 } from './personalEventGuards';
@@ -55,6 +55,7 @@ const EditPersonalEvent: React.FC<EditPersonalEventpops> = ({ route, navigation 
     handlers,
     loadedDate,
     loadedStartTime,
+    loadedTimezone,
   } = useEditPersonalEventForm();
 
   // ✅ Normally today, but an already-started event keeps its own race_date
@@ -269,6 +270,7 @@ const EditPersonalEvent: React.FC<EditPersonalEventpops> = ({ route, navigation 
           loadedDate,
           loadedStartTime,
           deviceTimezone: getDeviceTimezone(),
+          loadedTimezone,   // a time-only edit keeps the event's zone
         }),
         selectedFile: selectedFile ?? undefined,
         removeGpx: shouldRemoveGpx,
@@ -320,7 +322,10 @@ const EditPersonalEvent: React.FC<EditPersonalEventpops> = ({ route, navigation 
       // ✅ Only when this event owns the reminders (re-audit 2026-11-26):
       // cancel() also dropped the real next race's. Home re-plans from the
       // new date on its next answer.
-      void startReminderService.cancelIfFor(route.params.participantId);
+      // Second audit: and only when the gun moved — a rename keeps them.
+      if (editMovesGun({ date: formData.date, startTime: formData.startTime, loadedDate, loadedStartTime })) {
+        void startReminderService.cancelIfFor(route.params.participantId);
+      }
       // ✅ Saved: the kept draft is obsolete (re-audit A11).
       draftOffRef.current = true;
       void AsyncStorage.removeItem(EDIT_EVENT_DRAFT_KEY).catch(() => { /* silent */ });
@@ -346,7 +351,7 @@ const EditPersonalEvent: React.FC<EditPersonalEventpops> = ({ route, navigation 
   }, [
     clearAllErrors, validateForm, isSubmitting, eventId,
     formData, selectedFile, shouldRemoveGpx, navigation,
-    applyApiFieldErrors, t, loadedDate, loadedStartTime,
+    applyApiFieldErrors, t, loadedDate, loadedStartTime, loadedTimezone,
   ]);
 
   const showNewFile = !!selectedFile;

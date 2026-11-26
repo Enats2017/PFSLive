@@ -233,7 +233,11 @@ export const useEditProfile = (initialProfile: Profile | null) => {
 
     const submit = useCallback(async (
         overrides?: Partial<EditProfileForm>,
-        opts?: { cancelEmailChange?: boolean }
+        // onlyEmail: send JUST the email (the pending-address "verify" button).
+        // It used to submit the whole form, so a restored draft or a half-typed
+        // edit was saved silently by a tap on "verify my email" (second audit,
+        // AUE). edit_profile_api.php updates only the fields it receives.
+        opts?: { cancelEmailChange?: boolean; onlyEmail?: boolean }
     ): Promise<{
         ok: boolean
         isEmailChange: boolean
@@ -243,17 +247,23 @@ export const useEditProfile = (initialProfile: Profile | null) => {
         // mapped field error used to end silently (finding 5). Undefined when ok,
         // when a second tap was refused, or when the inline errors already explain it.
         failure?: EditProfileFailure
+        // The server's field codes, so a caller can tell "address taken" apart.
+        fieldErrors?: string[]
     }> => {
         const effective: EditProfileForm = { ...form, ...overrides }
 
-        if (!validate(effective)) return { ok: false, isEmailChange: false, emailChangeToken: null, pendingEmail: null }
+        if (opts?.onlyEmail) {
+            if (!EMAIL_REGEX.test(effective.email.trim())) {
+                return { ok: false, isEmailChange: false, emailChangeToken: null, pendingEmail: null, fieldErrors: ['email_invalid'] }
+            }
+        } else if (!validate(effective)) return { ok: false, isEmailChange: false, emailChangeToken: null, pendingEmail: null }
 
         if (!tryBeginSubmit(submittingRef)) return { ok: false, isEmailChange: false, emailChangeToken: null, pendingEmail: null }
 
         setLoading(true)
         setSuccess(false)
 
-        const payload: EditProfilePayload = {
+        const payload: EditProfilePayload = opts?.onlyEmail ? { email: effective.email.trim().toLowerCase() } : {
             firstname: effective.firstname.trim(),
             lastname: effective.lastname.trim(),
             email: effective.email.trim().toLowerCase(),
@@ -275,7 +285,7 @@ export const useEditProfile = (initialProfile: Profile | null) => {
         }
 
         try {
-            const result = await editProfileApi(payload, picture ?? undefined)
+            const result = await editProfileApi(payload, opts?.onlyEmail ? undefined : (picture ?? undefined))
 
             const isEmailChange = result.message === 'profile_updated_verify_email'
             const emailChangeToken = isEmailChange ? result.email_change_token ?? null : null
@@ -296,8 +306,10 @@ export const useEditProfile = (initialProfile: Profile | null) => {
                 confirmPassword: '',
             }))
 
-            setPicture(null)
-            setRemovePicture(false)
+            if (!opts?.onlyEmail) {
+                setPicture(null)
+                setRemovePicture(false)
+            }
 
             return { ok: true, isEmailChange, emailChangeToken, pendingEmail }
         } catch (err) {
@@ -325,6 +337,7 @@ export const useEditProfile = (initialProfile: Profile | null) => {
             return {
                 ok: false, isEmailChange: false, emailChangeToken: null, pendingEmail: null,
                 failure: silentlyExplained ? undefined : failure,
+                fieldErrors: err instanceof ValidationError ? err.fields : undefined,
             }
         } finally {
             setLoading(false)

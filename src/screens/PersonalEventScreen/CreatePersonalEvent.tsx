@@ -42,6 +42,7 @@ import {
   endSubmit,
   hasNoMappedField,
   PERSONAL_EVENT_DRAFT_KEY,
+  isGpxErrorCode,
   serializeDraft,
   parseDraft,
 } from './personalEventGuards';
@@ -319,6 +320,13 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation, route }
             navigation.navigate('LoginScreen');
             break;
           default:
+            // ✅ A file error as a top-level code (second audit 2026-11-26):
+            // shown on the file, not "try again later" for a file that can
+            // never be accepted. Newer servers send it as validation_failed.
+            if (isGpxErrorCode(action)) {
+              applyApiFieldErrors([action]);
+              break;
+            }
             showErrorModal('personal:errors.createFailedTitle', 'personal:errors.createFailedMessage');
             break;
         }

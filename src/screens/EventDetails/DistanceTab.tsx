@@ -299,10 +299,15 @@ const DistanceTab = ({
   // later one follows something that may have changed the registration
   // (ParticipantResult, a confirmation link opened while another screen was
   // on top) and showed the cached Connect button.
+  //
+  // ✅ Silent on a return (re-audit 2026-11-26, RE): the list is already on
+  // screen, so no full-screen spinner over it each time the runner comes back.
+  // Only the very first load shows the spinner.
   const focusedBeforeRef = useRef(false);
   useFocusEffect(
     useCallback(() => {
-      fetchDistances(focusedBeforeRef.current || !!refresh_nonce);
+      const returning = focusedBeforeRef.current;
+      fetchDistances(returning || !!refresh_nonce, returning);
       focusedBeforeRef.current = true;
     }, [fetchDistances])
   );

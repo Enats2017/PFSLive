@@ -10,8 +10,9 @@ import {
   CheckpointListItem,
 } from "../services/resultList";
 import { API_CONFIG } from "../constants/config";
+import { useIsFocused } from "@react-navigation/native";
 // ADD these two imports
-import { AppError, ErrorType } from "../services/api";
+import { AppError, ErrorType, isRateLimited } from "../services/api";
 import { useScreenError, ScreenError } from "../hooks/useApiError";
 import { useTranslation } from "react-i18next";
 import { rememberBibOwners } from "../utils/followStorage";
@@ -23,7 +24,14 @@ export const TYPE_OPTIONS: FilterOption[] = [
 
 const PRESERVED_CATEGORIES = ["favourite", "live_tracking"];
 
-type FetchMode = "initial" | "filter" | "paginate" | "refresh";
+// "quiet": a background refresh of page 1 — no spinner, no error screen
+// (second audit 2026-11-26, see the focus / live poll effects below).
+type FetchMode = "initial" | "filter" | "paginate" | "refresh" | "quiet";
+
+/** Back on the list after this long: refresh quietly. */
+export const QUIET_REFRESH_AFTER_MS = 30_000;
+/** While a race is in progress and the list is on screen: refresh this often. */
+export const LIVE_LIST_POLL_MS = 60_000;
 
 interface FetchOpts {
   povId?: number;
@@ -157,6 +165,9 @@ export const useResultList = (
   const { error, hasError, handleApiError, clearError } = useScreenError();
 
   const currentPage = useRef(1);
+  // When the list on screen was last fetched (epoch ms), and the 429 pause.
+  const lastFetchAt = useRef(0);
+  const pausedUntil = useRef(0);
 
   const toggleFav = useCallback((bib: string): void => {
     setFavBibs((prev) => {
@@ -191,8 +202,10 @@ export const useResultList = (
         // (dropped below) no longer owns the footer spinner.
         if (mode !== "paginate") setPageLoad(false);
 
-        clearError();
-        setPageError(false);
+        if (mode !== "quiet") {
+          clearError();
+          setPageError(false);
+        }
 
         if (API_CONFIG.DEBUG) {
           console.log("📡 Fetching results:", {
@@ -310,6 +323,9 @@ export const useResultList = (
 
         setPagination(data.pagination);
         currentPage.current = page;
+        lastFetchAt.current = Date.now();
+        // A quiet refresh that got through: the list is good again.
+        if (mode === "quiet") clearError();
 
         if (API_CONFIG.DEBUG) {
           console.log("✅ Results loaded:", {
@@ -327,9 +343,15 @@ export const useResultList = (
           console.error("❌ Fetch results error:", e);
         }
 
-        // ✅ A failed NEXT page keeps the rows on screen (footer retry).
+        // ✅ 429: no quiet refresh before the server's Retry-After.
+        if (isRateLimited(e)) {
+          const s = Number(e?.data?.retryAfter);
+          pausedUntil.current = Date.now() + (Number.isFinite(s) && s > 0 ? s : 60) * 1000;
+        }
+        // ✅ A failed NEXT page keeps the rows on screen (footer retry); a
+        // failed QUIET refresh keeps the list as it is (the next one retries).
         if (mode === "paginate") setPageError(true);
-        else handleApiError(e);
+        else if (mode !== "quiet") handleApiError(e);
       } finally {
         inFlight.current = Math.max(0, inFlight.current - 1);
         // Only the newest request ends the spinners; an overtaken one would
@@ -498,6 +520,42 @@ export const useResultList = (
     selectedCheckpoint,
     fetchData,
   ]);
+
+  // ✅ The list is no longer stale on return or during a race (second audit
+  // 2026-11-26). The tab bar now pops back to the list that is already open
+  // (utils/tabNavigation), whose focus only re-read the follows and which never
+  // polled — the ranking froze at whatever it was when first opened.
+  //  - back on the list after 30 s or more: refresh page 1 quietly;
+  //  - race in progress and the list on screen: the same every 60 s.
+  // Only while the user is at the top of the list (page 1 loaded) — a refresh
+  // replaces the rows, and would throw away the pages scrolled to. Never over a
+  // request in flight, never inside a 429 pause, never while not focused.
+  const isFocused = useIsFocused();
+  const quietArgs = useRef({ selectedPovId, fromLive, selectedCategory, selectedCheckpoint });
+  quietArgs.current = { selectedPovId, fromLive, selectedCategory, selectedCheckpoint };
+  const quietRefresh = useCallback((): void => {
+    if (inFlight.current > 0 || currentPage.current !== 1 || Date.now() < pausedUntil.current) return;
+    const a = quietArgs.current;
+    fetchData({
+      povId: a.selectedPovId,
+      live: a.fromLive,
+      category: a.selectedCategory,
+      page: 1,
+      mode: "quiet",
+      checkpointIndex: a.selectedCheckpoint ? Number(a.selectedCheckpoint.value) : null,
+    });
+  }, [fetchData]);
+  const focusSeen = useRef(false);
+  useEffect(() => {
+    if (!isFocused) return;
+    if (!focusSeen.current) { focusSeen.current = true; return; }   // the mount's own load
+    if (lastFetchAt.current > 0 && Date.now() - lastFetchAt.current >= QUIET_REFRESH_AFTER_MS) quietRefresh();
+  }, [isFocused, quietRefresh]);
+  useEffect(() => {
+    if (!isFocused || raceStatus !== "in_progress") return;
+    const id = setInterval(quietRefresh, LIVE_LIST_POLL_MS);
+    return () => clearInterval(id);
+  }, [isFocused, raceStatus, quietRefresh]);
 
   const onRefresh = useCallback((): void => {
     if (isFavTab) return;

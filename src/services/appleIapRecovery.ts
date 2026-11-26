@@ -27,11 +27,13 @@ import {
 } from "expo-iap";
 import { membershipPlanService, PlanItem } from "./membershipplanservice";
 import { appleVerifyService } from "./appleverifyservice";
+import { tokenService } from "./tokenService";
 import {
   processPurchase,
   selectRecoverable,
   openPaidConsumables,
   isTransientVerifyError,
+  accountScopedKey,
   type ResolveConsumable,
 } from "../hooks/iapPurchaseFlow";
 
@@ -60,9 +62,20 @@ export function markPlansScreenMounted(): () => void {
 const CONFIRMED_KEY = "@PFSLive:iapConfirmedTxns";
 const CONFIRMED_MAX = 50;
 
+// ✅ Per account (second audit PYF): see iapPurchaseFlow.accountScopedKey.
+async function scoped(base: string): Promise<string> {
+  let id: number | null = null;
+  try {
+    id = await tokenService.getCustomerId();
+  } catch {
+    id = null;
+  }
+  return accountScopedKey(base, id);
+}
+
 export async function loadConfirmedTxns(): Promise<Set<string>> {
   try {
-    const raw = await AsyncStorage.getItem(CONFIRMED_KEY);
+    const raw = await AsyncStorage.getItem(await scoped(CONFIRMED_KEY));
     const list = raw ? JSON.parse(raw) : [];
     return new Set(Array.isArray(list) ? list.map(String) : []);
   } catch {
@@ -76,7 +89,7 @@ export async function rememberConfirmedTxn(transactionId: string | null): Promis
     const set = await loadConfirmedTxns();
     if (set.has(transactionId)) return;
     const list = [...set, transactionId].slice(-CONFIRMED_MAX);
-    await AsyncStorage.setItem(CONFIRMED_KEY, JSON.stringify(list));
+    await AsyncStorage.setItem(await scoped(CONFIRMED_KEY), JSON.stringify(list));
   } catch {
     // Only an optimisation: worst case the period is verified once more.
   }
@@ -119,8 +132,10 @@ async function setIdIn(key: string, id: string | null, on: boolean): Promise<voi
 
 export const loadUnconfirmedTxns = () => loadIdSet(UNCONFIRMED_KEY);
 export const setUnconfirmedTxn = (id: string | null, on: boolean) => setIdIn(UNCONFIRMED_KEY, id, on);
-export const loadPermanentFailTxns = () => loadIdSet(PERMANENT_KEY);
-export const rememberPermanentFailTxn = (id: string | null) => setIdIn(PERMANENT_KEY, id, true);
+// Per account (PYF). UNCONFIRMED stays per device on purpose: it mirrors
+// StoreKit's own unfinished queue, which is the Apple ID's, not the login's.
+export const loadPermanentFailTxns = async () => loadIdSet(await scoped(PERMANENT_KEY));
+export const rememberPermanentFailTxn = async (id: string | null) => setIdIn(await scoped(PERMANENT_KEY), id, true);
 
 // ── "Something was just credited" (PN5) ──
 // A pass that started before the plans screen mounted credits a purchase the

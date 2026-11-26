@@ -1002,10 +1002,24 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   /**
    * Core GPS tracking logic — called after all confirmations passed.
    */
+  // ✅ Never start beside a Stop or the Stop-log retry (trackingLifecycle,
+  // 2026-11-26): an old Stop still draining wrote into the new session. WAITED
+  // for, not refused — a resumed start (back from Settings, the pocketed-Android
+  // resume on a cold start) used to be dropped silently while the lock was held.
+  // Only a lock still held after the wait gives up, and says so. Called BEFORE
+  // the start guard is taken (second audit): taken first, its 60 s clock ran
+  // during the ≤ 50 s wait and the guard could expire mid-start.
+  const waitForStopLock = async (): Promise<boolean> => {
+    if (await trackingLifecycle.waitUntilFree(START_WAIT_FOR_STOP_MS)) return true;
+    toastError(t('home:tracking.stopInProgressTitle'), t('home:tracking.stopInProgressBody'));
+    return false;
+  };
+
   const doStartGPSTracking = useCallback(async () => {
     // iOS background time for the start — taken after the last popup (see
     // gpsService.beginStartWindow), always released in finally.
     let startWindow: number | null = null;
+    if (!(await waitForStopLock())) return;
     // One start at a time, and never over a running session (see startingRef).
     if (isStarting() || isGPSActiveRef.current) return;
     startingRef.current = true;
@@ -1017,16 +1031,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     const allowApproximate = allowApproximateRef.current;
     allowApproximateRef.current = false;
     try {
-      // ✅ Never beside a Stop or the Stop-log retry (trackingLifecycle,
-      // 2026-11-26): an old Stop still draining wrote into this new session.
-      // WAITED for, not refused — a resumed start (back from Settings, the
-      // pocketed-Android resume on a cold start) used to be dropped silently
-      // while the lock was held (re-audit). Only a lock still held after the
-      // wait gives up, and says so.
-      if (!(await trackingLifecycle.waitUntilFree(START_WAIT_FOR_STOP_MS))) {
-        toastError(t('home:tracking.stopInProgressTitle'), t('home:tracking.stopInProgressBody'));
-        return;
-      }
       // Any Stop from here on — from THIS screen or a new one after a remount —
       // must take the engine down once it is up (see the check after it).
       const stopEpochAtStart = trackingLifecycle.stopEpoch();
@@ -1775,10 +1779,20 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     // Stop was refused while it uploaded and the finish flag was lost; "Stop
     // anyway" did nothing. Wait for it (≤ LOG_RETRY_WAIT_MS); only another real
     // Stop refuses this one.
-    await trackingLifecycle.waitForLogRetry();
-    const release = trackingLifecycle.beginStop();
-    if (!release) return false;
+    // ✅ Busy at once, and only ONE of several Stops waiting here runs (2026-11-26
+    // second audit): the finish tick + the foreground handler, or a double
+    // "Stop anyway", both waited and then both ran — the second a full Stop with
+    // home's ids and an extra toast. A Stop begun by anyone during the wait
+    // (the stop epoch moved) means this one has nothing left to do.
     setIsStopping(true);
+    const epochBeforeWait = trackingLifecycle.stopEpoch();
+    await trackingLifecycle.waitForLogRetry();
+    const release = trackingLifecycle.stopEpoch() === epochBeforeWait ? trackingLifecycle.beginStop() : null;
+    if (!release) {
+      // Leave "Stopping…" to the Stop that runs; clear it only if none does.
+      if (trackingLifecycle.holder() !== 'stop') setIsStopping(false);
+      return false;
+    }
     // ✅ A Stop whose await never settles frees the lock after STOP_STUCK_MS
     // (trackingLifecycle); "Stopping…" goes with it, or the button kept saying
     // Stopping while it already acted as Start / Stop again (2026-11-26 review).
@@ -2007,10 +2021,14 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         const active = await isTracking();
         if (!active || cancelled) return;
 
-        hasRestoredRef.current = true;
-
         const params = await getTrackingParams();
         if (!params || cancelled) return;
+
+        // ✅ Claimed only now, after the last await that can be "cancelled"
+        // (second audit): set before getTrackingParams, home data landing in
+        // between re-ran this effect — the new run saw "restored", the old one
+        // "cancelled", and Start showed over a running engine.
+        hasRestoredRef.current = true;
 
         // ✅ A session whose gun is more than a day old is not "the race in
         // progress" — it was never stopped (DNF, missed finish, force-quit). Do
@@ -2311,6 +2329,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       // ✅ Owner of the reminders (re-audit 2026-11-26): a personal-event
       // delete / edit cancels them only when it is this race.
       participantId: homeData?.next_race_participant_app_id ?? null,
+      // ✅ An unclosed session from an earlier day for another registration does
+      // not suppress today's reminders (see startReminderService.isOtherDaySession).
+      startOffered: homeData?.show_start_track === 1 && !!homeData?.next_race_participant_app_id,
+      eventTzOffsetMs: serverTimeOffsetKnownRef.current ? serverTimeOffsetRef.current : null,
       texts: {
         preTitle: t('home:reminders.preTitle'),
         preBody: t('home:reminders.preBody'),

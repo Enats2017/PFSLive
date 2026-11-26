@@ -171,3 +171,13 @@ export function liveRefreshMs(
   });
   return nearFinish ? FAST_REFRESH_MS : NORMAL_REFRESH_MS;
 }
+
+/**
+ * Does this answer set the distances, route and elevation too? Yes for the
+ * first load, a switch and Retry — and for an auto refresh while nothing has
+ * been shown yet (second audit 2026-11-26: after a failed first load the next
+ * good auto refresh skipped them, leaving a map with no route or picker).
+ */
+export function isFullLoad(autoRefresh: boolean, hasShownData: boolean): boolean {
+  return !autoRefresh || !hasShownData;
+}

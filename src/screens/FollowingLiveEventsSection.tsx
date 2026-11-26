@@ -29,10 +29,29 @@ function formatCountdown(totalSec: number): string {
  * the elapsed time twice: back on Home after 10 min, a race 20 min away read
  * 10 min, and Live showed before the gun.
  */
-export function secondsToStart(startsInSeconds: number | null | undefined, receivedAtMs: number, nowMs: number): number {
-    const elapsed = Math.max(0, Math.floor((nowMs - receivedAtMs) / 1000));
+export function secondsToStart(
+    startsInSeconds: number | null | undefined,
+    receivedAtMs: number,
+    nowMs: number,
+    serverNowTs?: number | null,
+): number {
+    // ✅ The answer can be up to 45 s old when it arrives (home_api's response
+    // cache; second audit 2026-11-26). Each event carries server_now_ts, the
+    // server clock when starts_in_seconds was computed: the time between that
+    // and the arrival is counted too. Only when it looks like cache age
+    // (0-120 s): a phone clock that is off by more falls back to the arrival.
+    let cacheAge = 0;
+    const ts = Number(serverNowTs);
+    if (Number.isFinite(ts) && ts > 0) {
+        const age = Math.floor(receivedAtMs / 1000 - ts);
+        if (age >= 0 && age <= MAX_TRUSTED_CACHE_AGE_S) cacheAge = age;
+    }
+    const elapsed = Math.max(0, Math.floor((nowMs - receivedAtMs) / 1000)) + cacheAge;
     return Math.max(0, (startsInSeconds || 0) - elapsed);
 }
+
+/** A larger gap between the server's clock and the arrival is a wrong phone clock. */
+export const MAX_TRUSTED_CACHE_AGE_S = 120;
 
 const FollowingLiveEventsSection: React.FC<Props> = ({ events, onRoutePress }) => {
     const { t } = useTranslation(['home', 'common']);
@@ -64,7 +83,7 @@ const FollowingLiveEventsSection: React.FC<Props> = ({ events, onRoutePress }) =
             </View>
 
             {events.map((event, eventIdx) => {
-                const remainingSec = secondsToStart(event.starts_in_seconds, receivedAt, now);
+                const remainingSec = secondsToStart(event.starts_in_seconds, receivedAt, now, event.server_now_ts);
                 const isLive = event.race_status === 'in_progress' || (event.race_status === 'upcoming' && remainingSec === 0);
                 const isUpcoming = event.race_status === 'upcoming' && remainingSec > 0;
 

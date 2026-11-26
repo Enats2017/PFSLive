@@ -82,11 +82,14 @@ export const useEditPersonalEventForm = () => {
   // loadedDate it tells the screen whether date/time changed, which is when
   // the phone's time zone is sent (editTimezoneToSend).
   const [loadedStartTime, setLoadedStartTime] = useState<string>('');
+  // ✅ The event's own zone (second audit 2026-11-26) — kept on a time-only edit.
+  const [loadedTimezone, setLoadedTimezone] = useState<string>('');
 
   const initFormFromEvent = useCallback(
     (event: PersonalEvent) => {
       setLoadedDate(event.race_date ?? '');
       setLoadedStartTime((event.start_hour ?? '').substring(0, 5));
+      setLoadedTimezone(event.timezone ?? '');
       setFormData({
         name: event.name ?? '',
         selectedEventType: matchEventType(event.event_type, eventTypeOptions),
@@ -192,6 +195,7 @@ export const useEditPersonalEventForm = () => {
     errors,
     loadedDate,
     loadedStartTime,
+    loadedTimezone,
     eventTypeOptions,
     categoryOptions,
     initFormFromEvent,

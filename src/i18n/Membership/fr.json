@@ -55,7 +55,8 @@
     "name": "Activation unique",
     "description": "Une session de suivi, valable un an.",
     "note": "Achat unique — sans renouvellement. Rachetez-en une dès que vous en avez besoin.",
-    "buy": "Acheter"
+    "buy": "Acheter",
+    "storeUnavailable": "L'App Store est injoignable pour le moment, les achats sont donc indisponibles. Réessayez plus tard."
   },
   "footerNote": "Abonnement annuel, renouvelé automatiquement.\nAnnulable à tout moment. Prix affiché par l'App Store.",
   "legal": {

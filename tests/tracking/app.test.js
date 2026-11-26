@@ -3173,7 +3173,7 @@ const L = () => load('services/locationService').locationService;
       assert.strictEqual(await b, false, 'refused → says so (no "earlier tracking stopped" toast)');
       assert.strictEqual(runs, 1, 'second Stop did nothing');
       finish(); assert.strictEqual(await a, true);
-      assert.deepStrictEqual(stopping, [true, false]);
+      assert.deepStrictEqual(stopping, [true, true, false], 'busy at once for both; the refused one never clears the running Stop\'s label');
       assert.strictEqual(lc.isStopping(), false, 'released after the Stop');
       await fn(lc, () => {}, run, undefined);
       assert.strictEqual(runs, 2, 'a later Stop runs again');
@@ -3194,7 +3194,9 @@ const L = () => load('services/locationService').locationService;
       const s = H();
       assert.ok(/if \(isStarting\(\)\) return; \/\/ tapped mid-start\n(\s*\/\/[^\n]*\n)+\s*if \(trackingLifecycle\.holder\(\) === 'stop'\) \{\n\s*toastError\(t\('home:tracking\.stopInProgressTitle'\), t\('home:tracking\.stopInProgressBody'\)\);\n\s*return;/.test(s), 'confirmStartTracking: a real Stop refuses the tap');
       // re-audit: every start (also the resumed ones) WAITS for the lock first, inside the try
-      assert.ok(/allowApproximateRef\.current = false;\n\s*try \{\n(\s*\/\/[^\n]*\n)+\s*if \(!\(await trackingLifecycle\.waitUntilFree\(START_WAIT_FOR_STOP_MS\)\)\) \{\n\s*toastError\(t\('home:tracking\.stopInProgressTitle'\)/.test(s), 'doStartGPSTracking waits for the lock, then says so');
+      // second audit: the wait comes BEFORE the start guard is taken, and says so when it gives up
+      assert.ok(/let startWindow: number \| null = null;\n\s*if \(!\(await waitForStopLock\(\)\)\) return;\n\s*\/\/[^\n]*\n\s*if \(isStarting\(\) \|\| isGPSActiveRef\.current\) return;/.test(s), 'doStartGPSTracking waits for the lock first');
+      assert.ok(/const waitForStopLock = async \(\): Promise<boolean> => \{\n\s*if \(await trackingLifecycle\.waitUntilFree\(START_WAIT_FOR_STOP_MS\)\) return true;\n\s*toastError\(t\('home:tracking\.stopInProgressTitle'\)/.test(s), 'then says so');
       assert.ok(/\{isStopping\n\s*\? t\('home:tracking\.stopping'\)/.test(s), 'button label');
       // The teardown + drain + upload is the inner function; nothing calls it but the wrapper.
       assert.strictEqual((s.match(/runStopGPSTracking\(/g) || []).length, 1, 'only the wrapper runs the inner stop');
@@ -3468,7 +3470,7 @@ const L = () => load('services/locationService').locationService;
       assert.strictEqual(lc.stopEpoch(), e0 + 1, 'Stop: bump');
       const s = H();
       const iCap = s.indexOf('const stopEpochAtStart = trackingLifecycle.stopEpoch();');
-      const iWait = s.indexOf('if (!(await trackingLifecycle.waitUntilFree(START_WAIT_FOR_STOP_MS))) {');
+      const iWait = s.indexOf('if (!(await waitForStopLock())) return;');
       const iEngine = s.indexOf('await gpsService.startWatchingPosition(');
       const iCheck = s.indexOf('trackingLifecycle.stopEpoch() !== stopEpochAtStart');
       assert.ok(iWait > 0 && iCap > iWait && iEngine > iCap && iCheck > iEngine, 'captured after the wait, compared after the engine');
@@ -3623,6 +3625,108 @@ const L = () => load('services/locationService').locationService;
       lc.startingRef.current = false;
       assert.strictEqual(a(), false);
       assert.strictEqual(load('services/trackingLifecycle').START_CLAIM_MS, 60000);
+    });
+
+    // ════ second audit 2026-11-26 ════
+    test('[#TRA] two Stops waiting on the log retry: only ONE runs once it frees (finish tick + foreground, double "Stop anyway")', async () => {
+      const lc = LC(); let runs = 0;
+      const rel = lc.beginStop(undefined, 'logRetry');
+      setTimeout(rel, 300);
+      let finish; const gate = new Promise((r) => { finish = r; });
+      const fn = wrapperFn(wrapperBody());
+      const a = fn(lc, () => {}, () => { runs++; return gate; }, { raceAlreadyFinished: true });
+      const b = fn(lc, () => {}, () => { runs++; return gate; }, undefined);
+      await new Promise((r) => setTimeout(r, 900));
+      finish();
+      const res = await Promise.all([a, b]);
+      assert.strictEqual(runs, 1, 'second Stop did not run after the first (old code: 2)');
+      assert.deepStrictEqual(res.sort(), [false, true]);
+    });
+    test('[#TRB] a backlog-drain finish writes the pending record before its upload (retried after a relaunch with the right ids)', async () => {
+      await startSession('7', '24');
+      M.store.set(SENT, '5');
+      M.api.mode = 'down';                                       // the upload fails
+      await load('services/gpsService').finishBackgroundStop('7', '24');
+      const pend = JSON.parse(M.store.get('@PFSLive:pendingFinish') || 'null');
+      assert.deepStrictEqual(pend, { participantId: '7', eventId: '24', sent: 5 }, 'pending kept for the retry (old code: none)');
+      assert.ok(!M.store.has('@PFSLive:logUploaded'), 'failed upload released its claim');
+    });
+    test('[#TRC] touchStop cannot extend a claim past STOP_HARD_MAX_MS (10 min) — a hung Stop frees the lock', async () => {
+      const lc = LC(); const T = load('services/trackingLifecycle');
+      assert.strictEqual(T.STOP_HARD_MAX_MS, 600000);
+      const rel = lc.beginStop(0);
+      for (let t = 60000; t <= 660000; t += 60000) lc.touchStop(t);
+      assert.strictEqual(lc.isStopping(590000), true, 'still alive under the cap');
+      assert.strictEqual(lc.isStopping(601000), false, 'touched every minute, still freed at 10 min (old code: held for ever)');
+      rel();
+    });
+    test('[#TRD] an earlier session\'s pending log is sent at the next Start (after the engine) under ITS ids, logUploaded left to the new session', async () => {
+      await startSession('9001', '24');
+      const g = load('services/gpsService');
+      await g.addLog('🏁', 'Saturday finish'); await g.flushTrackingLog();
+      await g.stopWatching();
+      M.store.set('@PFSLive:pendingFinish', JSON.stringify({ participantId: '9001', eventId: '24', sent: 40, queued: 0 }));
+      M.api.posted.length = 0;
+      await startSession('9002', '24');                          // Sunday
+      await new Promise((r) => setTimeout(r, 20));
+      const logs = M.api.posted.filter((x) => x.url.includes('save_tracking_log'));
+      assert.strictEqual(logs.length, 1, 'Saturday log sent (old code: dropped with the reset)');
+      assert.strictEqual(String(logs[0].body.participantId), '9001');
+      assert.strictEqual(logs[0].body.totalSent, 40);
+      assert.ok(logs[0].body.logs.some((e) => e.msg === 'Saturday finish'), 'the OLD log, taken before the reset');
+      assert.ok(!M.store.has('@PFSLive:logUploaded'), 'new session\'s flag untouched');
+      assert.ok(!M.store.has('@PFSLive:pendingFinish'));
+    });
+    test('[#TRE] the finish upload claims logUploaded straight after its check (before the flush / full-log read)', async () => {
+      const src = fs.readFileSync(`${SRC}/services/gpsService.ts`, 'utf8').replace(/\r/g, '');
+      const at = src.indexOf('const _uploadTrackingLogOnFinish = async (');
+      const fn = src.slice(at, src.indexOf('\n};', at));
+      const iCheck = fn.indexOf('if (isLogUploadTaken(await AsyncStorage.getItem(LOG_UPLOADED_KEY))) return;');
+      const iClaim = fn.indexOf('await AsyncStorage.setItem(LOG_UPLOADED_KEY, myClaim);');
+      const iFlush = fn.indexOf('await _flushLogsNow();');
+      const iUp = fn.indexOf('await locationService.saveTrackingLog(');
+      assert.ok(iCheck > 0 && iClaim > iCheck && iFlush > iClaim && iUp > iFlush, 'check → claim → flush/read → upload');
+      // behaviour: nothing to send → the claim is given back
+      M.store.set(PARAMS, JSON.stringify({ participantId: '2', eventId: '12' }));
+      await load('services/gpsService').finishBackgroundStop('', '');
+      assert.ok(!String(M.store.get('@PFSLive:logUploaded') || '').startsWith('claim:'), 'no claim left behind');
+    });
+    test('[#TRF] the start guard is taken AFTER the wait for a Stop (its 60 s clock never runs during the ≤ 50 s wait)', async () => {
+      const s = H();
+      const at = s.indexOf('const doStartGPSTracking = useCallback(async () => {');
+      const fn = s.slice(at, at + 1500);
+      const iWait = fn.indexOf('if (!(await waitForStopLock())) return;');
+      const iGuard = fn.indexOf('if (isStarting() || isGPSActiveRef.current) return;');
+      const iClaim = fn.indexOf('const startedAt = Date.now();');
+      assert.ok(iWait > 0 && iGuard > iWait && iClaim > iGuard, 'wait → guard → claim (old code: claim → wait)');
+    });
+    test('[#T1-REMINDERS] a stored session from an earlier day for ANOTHER registration does not suppress today\'s start reminders', async () => {
+      const { startReminderService, isOtherDaySession } = SR();
+      const now = M.clock;
+      const sat = JSON.stringify({ participantId: '9001', eventId: '24', raceStartTime: new Date(now - 20 * HOUR).toISOString() });
+      const prevDay = new Date(now - 20 * HOUR).toISOString().slice(0, 10) < new Date(now).toISOString().slice(0, 10);
+      assert.strictEqual(isOtherDaySession(sat, '9002', 0, now), prevDay, 'other registration, earlier day');
+      assert.strictEqual(isOtherDaySession(sat, '9001', 0, now), false, 'same registration');
+      assert.strictEqual(isOtherDaySession(sat, '9002', null, now), false, 'no offset → unchanged');
+      assert.strictEqual(isOtherDaySession(JSON.stringify({ participantId: '9001', raceStartTime: new Date(now).toISOString() }), '9002', 0, now), false, 'today\'s session');
+      // fixed day: Saturday 13:00 local session, Sunday 06:00 local now
+      const T = Date.UTC(2026, 10, 29, 5, 0, 0);
+      M.clock = T;
+      M.store.set(PARAMS, JSON.stringify({ participantId: '9001', eventId: '24', raceStartTime: '2026-11-28T12:00:00.000Z' }));
+      const plan = await startReminderService.sync({ gun: new Date(T + 2.5 * HOUR), eligible: false, startOffered: true, eventTzOffsetMs: 3600000, participantId: '9002', texts: TEXTS });
+      assert.strictEqual(plan.length, 2, 'Sunday reminders scheduled (old code: suppressed by the Saturday params)');
+      const plan2 = await startReminderService.sync({ gun: new Date(T + 2.5 * HOUR), eligible: true, startOffered: true, eventTzOffsetMs: 3600000, participantId: '9001', texts: TEXTS });
+      assert.strictEqual(plan2.length, 0, 'the live session\'s own registration → still suppressed');
+      assert.ok(/startOffered: homeData\?\.show_start_track === 1 && !!homeData\?\.next_race_participant_app_id,\n\s*eventTzOffsetMs: serverTimeOffsetKnownRef\.current \? serverTimeOffsetRef\.current : null,/.test(H()), 'HomeScreen passes both');
+    });
+    test('[#RESTORE-ORDER] the restore claims hasRestoredRef only after its last cancellable await (home data landing in between no longer aborts it)', async () => {
+      const s = H();
+      const at = s.indexOf('const restore = async () => {');
+      const fn = s.slice(at, at + 3000);
+      const iParams = fn.indexOf('const params = await getTrackingParams();');
+      const iCheck = fn.indexOf('if (!params || cancelled) return;');
+      const iClaim = fn.indexOf('hasRestoredRef.current = true;');
+      assert.ok(at > 0 && iParams > 0 && iCheck > iParams && iClaim > iCheck, 'params → check → claim (old code: claim before the await)');
     });
   }
   results.push(await run('22. Start/Stop lifecycle audit 2026-11-26: one Stop, no Start while stopping, Stop during start, Stop log kept, previous-day session, 401 mid-race, restore re-check, unmounted Start, poll leak, reminder order'));

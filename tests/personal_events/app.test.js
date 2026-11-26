@@ -424,6 +424,53 @@ test('A11 EditPersonalEvent keeps the draft, restores it with a notice, drops it
   }
 });
 
+// ════════════ second audit 2026-11-26 (PA, PB, F-16 rest, F-17 rest) ════════════
+test('PA a top-level gpx_* code from create is shown on the file field, not "try again later"', () => {
+  const { isGpxErrorCode } = G();
+  assert.strictEqual(isGpxErrorCode('gpx_invalid_content'), true);
+  assert.strictEqual(isGpxErrorCode('gpx_too_large'), true);
+  assert.strictEqual(isGpxErrorCode('create_failed'), false);
+  const s = read('screens/PersonalEventScreen/CreatePersonalEvent.tsx');
+  const def = s.slice(s.lastIndexOf('default:', s.indexOf("showErrorModal('personal:errors.createFailedTitle', 'personal:errors.createFailedMessage')")));
+  assert.ok(/if \(isGpxErrorCode\(action\)\) \{\s*applyApiFieldErrors\(\[action\]\);/.test(def), 'mapped before the generic modal');
+});
+test('PB a rename keeps the reminders; date or time change → cancelIfFor', () => {
+  const { editMovesGun } = G();
+  const base = { date: '2099-01-01', startTime: '09:00', loadedDate: '2099-01-01', loadedStartTime: '09:00' };
+  assert.strictEqual(editMovesGun(base), false);
+  assert.strictEqual(editMovesGun({ ...base, startTime: '10:00' }), true);
+  assert.strictEqual(editMovesGun({ ...base, date: '2099-01-02' }), true);
+  const s = read('screens/PersonalEventScreen/EditPersonalEvent.tsx');
+  assert.ok(/if \(editMovesGun\(\{[^}]*\}\)\) \{\s*void startReminderService\.cancelIfFor\(/.test(s), 'cancel only when the gun moved');
+});
+test('F16-rest a time-only edit keeps the event zone; a date change or an event without zone sends the phone zone', () => {
+  const { editTimezoneToSend } = G();
+  const base = { date: '2099-01-01', startTime: '09:00', loadedDate: '2099-01-01', loadedStartTime: '09:00', deviceTimezone: 'Asia/Tokyo', loadedTimezone: 'Europe/Brussels' };
+  assert.strictEqual(editTimezoneToSend({ ...base, startTime: '10:00' }), undefined, 'time only');
+  assert.strictEqual(editTimezoneToSend({ ...base, date: '2099-01-02' }), 'Asia/Tokyo', 'date changed');
+  assert.strictEqual(editTimezoneToSend({ ...base, loadedTimezone: '' }), 'Asia/Tokyo', 'no stored zone');
+  assert.ok(/loadedTimezone,\s+\/\/ a time-only edit keeps the event's zone/.test(read('screens/PersonalEventScreen/EditPersonalEvent.tsx')), 'screen passes the stored zone');
+  assert.ok(/setLoadedTimezone\(event\.timezone/.test(read('hooks/Useeditpersonaleventform.ts')), 'hook keeps it');
+});
+test('F17-rest after login with a pending create draft → back to PersonalEvent (Home underneath)', async () => {
+  const g = G();
+  const store = new Map([[g.PERSONAL_EVENT_DRAFT_KEY, g.serializeDraft({ name: 'Trail', eventTypeId: 3, categoryId: 59, date: '2099-01-01', startTime: '', file: null }, Date.now())]]);
+  const resets = [];
+  const hook = load('hooks/usePendingRegistration', {
+    react: { useCallback: (f) => f },
+    '@react-native-async-storage/async-storage': { __esModule: true, default: {
+      getItem: async (k) => (store.has(k) ? store.get(k) : null), setItem: async (k, v) => { store.set(k, v); }, removeItem: async (k) => { store.delete(k); }, multiRemove: async () => {} } },
+    '../constants/config': fakeConfig(),
+    '../../utils/toast': { toastInfo: () => {} },
+    '../i18n': { __esModule: true, default: { t: (k) => k } },
+  }).usePendingRegistration;
+  await hook({ reset: (r) => resets.push(r) }).handleAfterAuth();
+  assert.deepStrictEqual(resets[0] && resets[0].routes.map((r) => r.name), ['HomeScreen', 'PersonalEvent']);
+  store.clear(); resets.length = 0;
+  await hook({ reset: (r) => resets.push(r) }).handleAfterAuth();
+  assert.deepStrictEqual(resets[0].routes.map((r) => r.name), ['HomeScreen'], 'no draft → Home as before');
+});
+
 // ── run ──────────────────────────────────────────────────────────────────
 (async () => {
   let pass = 0, fail = 0;

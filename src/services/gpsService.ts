@@ -751,11 +751,20 @@ const _uploadTrackingLogOnFinish = async (
     try {
       if (isLogUploadTaken(await AsyncStorage.getItem(LOG_UPLOADED_KEY))) return;
     } catch { /* fall through and attempt the upload */ };
+    // ✅ Claimed straight after the check (2026-11-26 second audit) — not after
+    // the flush and the full-log read below, which left a sub-second window in
+    // which HomeScreen's retry also read "not uploaded" and uploaded the same log.
+    const myClaim = logClaimValue();
+    await AsyncStorage.setItem(LOG_UPLOADED_KEY, myClaim);
     // Persist the in-memory buffer first so the 🏆 / 🛑 finish entries are in it,
     // then stitch the whole ride (all sealed segments + current) for upload.
     await _flushLogsNow();
     const logs: TrackingLogEntry[] = await _readFullLog();
-    if (!logs || logs.length === 0) return;
+    if (!logs || logs.length === 0) {
+      // Nothing to send: give the claim back.
+      if ((await AsyncStorage.getItem(LOG_UPLOADED_KEY)) === myClaim) await AsyncStorage.removeItem(LOG_UPLOADED_KEY);
+      return;
+    }
 
     let remaining = 0;
     try {
@@ -785,7 +794,7 @@ const _uploadTrackingLogOnFinish = async (
     // claim is released again if the save fails, so the other path still retries
     // — which is the behaviour the comment above always described but, because
     // saveTrackingLog swallowed its errors and returned void, never actually had.
-    await AsyncStorage.setItem(LOG_UPLOADED_KEY, logClaimValue());
+    // (The claim itself is now taken right after the check above.)
     const uploaded = await locationService.saveTrackingLog(participantId, eventId, logs, sentCount, remaining);
     if (uploaded === false) {
       try { await AsyncStorage.removeItem(LOG_UPLOADED_KEY); } catch { /* silent */ }
@@ -2430,6 +2439,15 @@ export const finishBackgroundStop = async (
   // 2) Upload (can be slow; notification is already gone).
   let sentCount = 0;
   try { const c = await AsyncStorage.getItem(BACKGROUND_SENT_COUNT_KEY); sentCount = c ? (parseInt(c) || 0) : 0; } catch {}
+  // ✅ Pending record FIRST (2026-11-26 second audit), like the live finish and
+  // a manual Stop: a failed upload here (no network at the finish, Livio killed)
+  // was never retried after a relaunch, and HomeScreen's Stop fell back to
+  // home's ids. HomeScreen's drain-pending-finish uploads it later.
+  if (participantId && eventId) {
+    try {
+      await AsyncStorage.setItem(PENDING_FINISH_KEY, JSON.stringify({ participantId, eventId, sent: sentCount }));
+    } catch { /* silent — the upload below still runs */ }
+  }
   try { await _uploadTrackingLogOnFinish(participantId ?? '', eventId ?? '', sentCount); } catch {}
 
   // 2b) Analytics: this path ends sessions INDEPENDENTLY of
@@ -3157,6 +3175,32 @@ export const gpsService = {
         if (API_CONFIG.DEBUG) console.log('♻️ Stopped leftover expo-location task from previous session/install');
       } catch { /* not running */ }
 
+      // ✅ An earlier session's log still waiting for upload (PENDING_FINISH, e.g.
+      // Saturday's Stop / finish had no network) used to be DROPPED here with the
+      // log reset below (2026-11-26 second audit, Soupe Sunday). Snapshot it now;
+      // it is sent best-effort AFTER the engine started (never delays the start —
+      // Android must start the engine while Livio is on screen) and never touches
+      // logUploaded, which from here on belongs to the new session.
+      let _earlierLog: { participantId: string; eventId: string; sent: number; queued: number; logs: TrackingLogEntry[] } | null = null;
+      try {
+        const _pendRaw = await AsyncStorage.getItem(PENDING_FINISH_KEY);
+        if (_pendRaw && !isLogUploadTaken(await AsyncStorage.getItem(LOG_UPLOADED_KEY))) {
+          const _pend = JSON.parse(_pendRaw);
+          if (_pend?.participantId && _pend?.eventId) {
+            const _logs = await _readFullLog();
+            if (_logs.length > 0) {
+              const _n = async (k: string) => parseInt((await AsyncStorage.getItem(k)) || '0', 10) || 0;
+              _earlierLog = {
+                participantId: String(_pend.participantId), eventId: String(_pend.eventId),
+                sent: typeof _pend.sent === 'number' ? _pend.sent : Math.max(await _n(BACKGROUND_SENT_COUNT_KEY), await _n(FINAL_SENT_COUNT_KEY)),
+                queued: typeof _pend.queued === 'number' ? _pend.queued : 0,
+                logs: _logs,
+              };
+            }
+          }
+        }
+      } catch { /* best effort — never cost the start */ }
+
       // Snapshot whether a session was already active BEFORE we overwrite params.
       // A fresh start (no prior session) means any queued fixes are stale
       // post-finish stragglers — safe to clear. A relaunch onto an existing
@@ -3370,6 +3414,14 @@ export const gpsService = {
 
         await addLog('🛰️', 'Transistor started — native WakeLock active');
         await logBatteryState('start');
+        // The earlier session's log (see _earlierLog): fire and forget.
+        if (_earlierLog) {
+          const _e = _earlierLog;
+          try {
+            const { locationService: _ls } = require('./locationService');
+            void Promise.resolve(_ls.saveTrackingLog(_e.participantId, _e.eventId, _e.logs, _e.sent, _e.queued)).catch(() => { /* best effort */ });
+          } catch { /* best effort */ }
+        }
         if (API_CONFIG.DEBUG) console.log('✅ Transistor started');
       } catch (transistorErr: any) {
         // FATAL since 2026-10-20 (re-check). Transistor is the only engine, so a

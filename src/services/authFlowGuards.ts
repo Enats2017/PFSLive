@@ -68,6 +68,20 @@ export function otpTokenInvalidKey(purpose: OtpPurposeLike, code: string): strin
 }
 
 /**
+ * ✅ A registration code that can never be used again (second audit, AUB):
+ * too many wrong codes or resends. The way forward is a new sign-up with the
+ * same email (register_api keeps nothing in the way of that), so the stored
+ * "resume this registration" entry must go and the copy must say so. Other
+ * purposes keep their own messages.
+ */
+export function otpDeadEndKey(purpose: OtpPurposeLike, code: string): string | null {
+  if (purpose !== 'registration') return null;
+  return code === 'otp_max_attempts' || code === 'otp_too_many_attempts' || code === 'otp_max_resends'
+    ? 'registerAgain'
+    : null;
+}
+
+/**
  * ✅ A registration that has not been verified yet, kept so the code can still be
  * entered after the app was killed on the OTP screen. Before this the
  * verification_token lived only in navigation params: Login then answered
@@ -169,6 +183,16 @@ export function shouldNoticeExpiredConnect(
   fresh: boolean,
 ): boolean {
   return !!productId && !!optionId && !fresh;
+}
+
+/**
+ * ✅ The pending-email "verify" button failed on the ADDRESS itself (taken or
+ * invalid) - the only case for "address taken" copy and resetting the field.
+ * Anything else (offline, 401, 5xx) gets the normal save-failure message
+ * (second audit 2026-11-26, AUE).
+ */
+export function pendingVerifyFailedOnField(fieldErrors: string[] | undefined): boolean {
+  return !!fieldErrors && fieldErrors.some((c) => c === 'email_already_taken' || c === 'email_invalid' || c === 'email_too_long');
 }
 
 /**

@@ -29,6 +29,7 @@ import {
   isUserInitiatedEvent,
   validAppAccountToken,
   openPaidConsumables,
+  ownsUserState,
   type PurchaseFlowResult,
 } from "./iapPurchaseFlow";
 import {
@@ -128,6 +129,8 @@ interface UseMembershipPlansResult {
   retryingUnconfirmed: boolean;
   /** StoreKit not asked yet whether a paid activation is still open (PN1). */
   checkingStore: boolean;
+  /** StoreKit did not connect or could not be read (second audit PYC). */
+  storeUnavailable: boolean;
   /** Paid and confirmed, the cron has not activated it yet (#4). */
   paymentPending: boolean;
   /** StoreKit is waiting for approval (Ask to Buy / deferred payment) (#8). */
@@ -170,6 +173,8 @@ export function useMembershipPlans(): UseMembershipPlansResult {
   // activation, the activation is not sold (PN1). iOS only (no IAP elsewhere).
   const [checkingStore, setCheckingStore] = useState<boolean>(Platform.OS === "ios");
   const [retryingUnconfirmed, setRetryingUnconfirmed] = useState(false);
+  // StoreKit did not connect / could not be read (PYC): Buy stays blocked, the screen says why.
+  const [storeUnavailable, setStoreUnavailable] = useState(false);
   useEffect(() => {
     let alive = true;
     loadUnconfirmedTxns().then((ids) => {
@@ -463,8 +468,14 @@ export function useMembershipPlans(): UseMembershipPlansResult {
   const handlePurchase = useCallback(
     async (
       purchase: any,
-      userInitiated: boolean,
+      userInitiatedEvent: boolean,
     ): Promise<PurchaseFlowResult<VerifyPurchaseResponse>> => {
+      // ✅ Only the call that will actually verify drives the user-facing state
+      // (second audit PYA). A duplicate StoreKit event for a transaction already
+      // being verified (or done) used to release the gate and close the modal
+      // mid-verify, so Buy was live again. It now returns untouched.
+      const userInitiated =
+        userInitiatedEvent && ownsUserState(purchase, processedTransactions.current, processingRef.current);
       if (userInitiated) {
         // The purchase event arrived: the pending-approval timer (#8) of this
         // purchase must not release the gate while we verify.
@@ -606,17 +617,27 @@ export function useMembershipPlans(): UseMembershipPlansResult {
       try {
         await runRecoveryPass();
       } catch (error: any) {
+        // StoreKit was NOT read: keep Buy blocked (PYC) and say why.
         console.warn("⚠️ Unfinished-transaction recovery failed:", error?.message);
-      } finally {
-        setCheckingStore(false); // persisted unconfirmed ids still block (PN1)
+        setStoreUnavailable(true);
       }
     })();
   }, [connected, productSkus, runRecoveryPass]);
 
-  // StoreKit never connected: stop "checking" after a while; without a
-  // connection a purchase cannot start anyway (PN1).
+  // ✅ No timed fallback (second audit PYC): a 15 s timer unblocked Buy before
+  // StoreKit had been asked. Buy stays blocked until the pass has read
+  // Transaction.all. When StoreKit did not connect within PRICE_WAIT_MS (or
+  // the read failed) the screen says the App Store is unavailable instead -
+  // without a connection a purchase cannot start anyway.
+  const connectedRef = useRef(false);
   useEffect(() => {
-    const t = setTimeout(() => setCheckingStore(false), 15000);
+    connectedRef.current = connected;
+    if (connected) setStoreUnavailable(false);
+  }, [connected]);
+  useEffect(() => {
+    const t = setTimeout(() => {
+      if (!connectedRef.current) setStoreUnavailable(true);
+    }, PRICE_WAIT_MS);
     return () => clearTimeout(t);
   }, []);
 
@@ -690,6 +711,9 @@ export function useMembershipPlans(): UseMembershipPlansResult {
       for (const purchase of toVerify) {
         const flow = await handlePurchase(purchase, false);
         if (flow.outcome === "verified" && isQueuedAction(flow.result?.action)) queued++;
+        // ✅ A recovery pass is verifying this one right now (second audit PYB):
+        // it is being credited - "pending", not "nothing to restore".
+        if (flow.outcome === "in_flight") queued++;
         // PN7: credited to the account it was bought FOR, not this one
         if (flow.outcome === "verified" && flow.result?.action === PURCHASE_CREDITED_OTHER) creditedOther++;
         if (flow.outcome === "verify_failed") {
@@ -880,6 +904,7 @@ export function useMembershipPlans(): UseMembershipPlansResult {
     paymentPending: plansData?.entitlement?.payment_pending === true,
     retryingUnconfirmed,
     checkingStore,
+    storeUnavailable,
     purchasePendingApproval,
     resetPendingApproval,
   };
